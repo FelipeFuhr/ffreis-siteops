@@ -1,0 +1,53 @@
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  disable-all: true
+  enable:
+    # Correctness
+    - govet          # go vet (shadowed vars, printf mismatches, etc.)
+    - errcheck       # unchecked errors
+    - staticcheck    # staticcheck suite (SA*, ST*, QF*, S*)
+    - ineffassign    # assignments with no effect
+    - unused         # unexported symbols that are never used
+
+    # Style / formatting
+    - gofmt          # standard formatting
+    - goimports      # import grouping
+    - misspell       # common English misspellings
+
+    # Security
+    - gosec          # G-code security rules (hardcoded credentials, path traversal, etc.)
+
+    # Bugs
+    - bodyclose      # HTTP response body must be closed
+    - noctx          # HTTP requests must carry context
+
+    # Maintainability
+    - godot          # comments must end in a period
+    - nolintlint     # nolint directives must be specific and justified
+
+linters-settings:
+  govet:
+    enable:
+      - copylocks
+  errcheck:
+    check-type-assertions: true
+    check-blank: false  # `_ = expr` is intentional in tests
+  godot:
+    scope: declarations
+    capital: false
+  goimports:
+    local-prefixes: ffreis-siteops
+
+issues:
+  exclude-rules:
+    # Test files: relax errcheck and gosec
+    - path: "_test\\.go"
+      linters: [errcheck, gosec]
+    # Generated files
+    - path: "vendor/"
+      linters: [all]
+  max-issues-per-linter: 0
+  max-same-issues: 0
