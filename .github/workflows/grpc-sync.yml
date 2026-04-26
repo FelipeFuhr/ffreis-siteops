@@ -1,0 +1,20 @@
+name: Stitcher gRPC Sync
+
+on:
+  pull_request:
+    paths:
+      - '**'
+      - '.github/workflows/**'
+
+jobs:
+  grpc-sync:
+    uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-run-commands.yml@main
+    with:
+      working-directory: "."
+      skip-if-glob-empty: |-
+        **/*.proto
+        **/*_pb.go
+        **/*.pb.go
+      commands: |-
+        set -euo pipefail
+        echo "Proto/gRPC files detected. Add a generation check script to enforce sync."

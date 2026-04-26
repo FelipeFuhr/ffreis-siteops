@@ -1,0 +1,30 @@
+pre-commit:
+  parallel: true
+  commands:
+    hygiene-merge-markers:
+      run: ./scripts/hooks/check_merge_markers.sh
+    hygiene-large-files:
+      run: ./scripts/hooks/check_large_files.sh
+    hygiene-binary-files:
+      run: ./scripts/hooks/check_binary_files.sh
+    go-mod-drift:
+      run: ./scripts/hooks/check_go_mod_drift.sh
+    fmt-check:
+      run: make fmt-check
+    lint:
+      run: make lint
+    secret-scan:
+      run: make secrets-scan-staged
+
+pre-push:
+  parallel: false
+  commands:
+    quality-gates:
+      run: make quality-gates
+    generated-drift:
+      run: make hook-generated-drift
+
+commit-msg:
+  commands:
+    conventional-commits:
+      run: ./scripts/hooks/check_commit_msg.sh {1}

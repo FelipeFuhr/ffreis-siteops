@@ -1,0 +1,62 @@
+name: Stitcher Docker Build
+
+on:
+  pull_request:
+    paths:
+      - '**'
+      - '.github/workflows/**'
+  push:
+    branches: [main, master]
+    paths:
+      - '**'
+      - '.github/workflows/**'
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build container image
+        run: |
+          set -euo pipefail
+          if command -v podman >/dev/null 2>&1; then
+            ENGINE="podman"
+          else
+            ENGINE="docker"
+          fi
+
+          PREFIX="${PREFIX:-}"
+          IMAGE_PROVIDER="${IMAGE_PROVIDER:-}"
+          IMAGE_TAG="${IMAGE_TAG:-local}"
+          COMPILER_IMAGE_NAME="${COMPILER_IMAGE_NAME:-website-compiler-cli}"
+          STITCHER_IMAGE_NAME="${STITCHER_IMAGE_NAME:-website-compiler-watch}"
+          if [ -n "${IMAGE_PROVIDER}" ]; then
+            IMAGE_ROOT="${IMAGE_PROVIDER}/${PREFIX}"
+          else
+            IMAGE_ROOT="${PREFIX}"
+          fi
+          WEBSITE_COMPILER_IMAGE="${WEBSITE_COMPILER_IMAGE:-${IMAGE_ROOT}/${COMPILER_IMAGE_NAME}:${IMAGE_TAG}}"
+          STITCHER_IMAGE="${STITCHER_IMAGE:-${IMAGE_ROOT}/${STITCHER_IMAGE_NAME}:${IMAGE_TAG}}"
+          STITCHER_RUNTIME_IMAGE="${STITCHER_RUNTIME_IMAGE:-debian:bookworm-slim}"
+          : "${WEBSITE_COMPILER_IMAGE:?WEBSITE_COMPILER_IMAGE must not be empty}"
+          : "${STITCHER_IMAGE:?STITCHER_IMAGE must not be empty}"
+          : "${STITCHER_RUNTIME_IMAGE:?STITCHER_RUNTIME_IMAGE must not be empty}"
+
+          echo "Using compiler image: ${WEBSITE_COMPILER_IMAGE}"
+          if ! ${ENGINE} pull "${WEBSITE_COMPILER_IMAGE}"; then
+            echo "Failed to pull compiler image: ${WEBSITE_COMPILER_IMAGE}" >&2
+            echo "Set IMAGE_PROVIDER/PREFIX/IMAGE_TAG or WEBSITE_COMPILER_IMAGE to a resolvable image." >&2
+            exit 1
+          fi
+
+          if [ -f containers/Dockerfile ]; then
+            ${ENGINE} build \
+              --build-arg WEBSITE_COMPILER_IMAGE="${WEBSITE_COMPILER_IMAGE}" \
+              --build-arg STITCHER_RUNTIME_IMAGE="${STITCHER_RUNTIME_IMAGE}" \
+              -t "${STITCHER_IMAGE}" \
+              -f containers/Dockerfile .
+          elif [ -f Dockerfile ]; then
+            ${ENGINE} build -t "${STITCHER_IMAGE}" .
+          else
+            echo "No Dockerfile found, skipping."
+          fi

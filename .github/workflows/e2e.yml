@@ -1,0 +1,67 @@
+name: E2E Smoke
+
+on:
+  pull_request:
+    paths:
+      - '**'
+      - '.github/workflows/**'
+  push:
+    branches: [main, master]
+    paths:
+      - '**'
+      - '.github/workflows/**'
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.8'
+          cache: true
+      - name: Build stitcher binary
+        run: go build -o website-stitcher ./cmd/website-stitcher
+      - name: Create mock compiler
+        run: |
+          cat > /tmp/mock-website-compiler.sh <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          command_name="${1:-}"
+          shift || true
+          out=""
+          while [ $# -gt 0 ]; do
+            case "$1" in
+              -out)
+                out="$2"
+                shift 2
+                ;;
+              *)
+                shift
+                ;;
+            esac
+          done
+          [ -n "$out" ] || { echo "missing -out" >&2; exit 1; }
+          mkdir -p "$out"
+          printf '<html><body>%s ok</body></html>\n' "$command_name" > "$out/index.html"
+          EOF
+          chmod +x /tmp/mock-website-compiler.sh
+      - name: Stitcher build smoke
+        run: |
+          cat > /tmp/stitcher-ci.yaml <<'EOF'
+          project_name: "ci"
+          compiler_command: "/tmp/mock-website-compiler.sh"
+          website_root: "."
+          out_dir: "/tmp/stitcher-dist"
+          default_addr: ":8080"
+          container_command: "podman"
+          compose_command: ["./compose.sh"]
+          compose_file: "./docker-compose.yml"
+          compose_env: {}
+          EOF
+          ./website-stitcher -config /tmp/stitcher-ci.yaml build-inline
+          test -f /tmp/stitcher-dist/index.html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stitcher-built-site
+          path: /tmp/stitcher-dist

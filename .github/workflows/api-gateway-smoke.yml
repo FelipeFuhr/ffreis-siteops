@@ -1,0 +1,30 @@
+name: Stitcher API Gateway Smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '20 4 * * *'
+
+jobs:
+  require-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate required secrets
+        shell: bash
+        env:
+          STITCHER_SMOKE_BASE_URL: ${{ secrets.STITCHER_SMOKE_BASE_URL }}
+        run: |
+          set -euo pipefail
+          [ -n "${STITCHER_SMOKE_BASE_URL}" ] || (echo "Missing required secret: STITCHER_SMOKE_BASE_URL" >&2; exit 1)
+
+  smoke:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.STITCHER_SMOKE_BASE_URL != '' }}
+    steps:
+      - name: Smoke checks
+        env:
+          BASE: ${{ secrets.STITCHER_SMOKE_BASE_URL }}
+        run: |
+          set -euo pipefail
+          curl -fsS "$BASE/" >/dev/null
+          curl -fsS "$BASE/index.html" >/dev/null

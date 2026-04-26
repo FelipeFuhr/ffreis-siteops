@@ -1,0 +1,19 @@
+name: Lefthook
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  lefthook:
+    uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-lefthook.yml@main
+    with:
+      working-directory: "."
+      go-version: "1.25.8"
+      lefthook-bootstrap-command: "make lefthook-bootstrap"
+      lefthook-bin: ".bin/lefthook"

@@ -30,3 +30,12 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Prevent accidental commit of confidential website inputs.
+*-website/
+
+# Local/generated artifacts.
+.bin/
+dist/
+dist*/
+config/*.local.yaml
