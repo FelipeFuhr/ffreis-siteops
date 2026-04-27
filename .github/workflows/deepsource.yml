@@ -36,7 +36,7 @@ jobs:
       - name: Run tests with coverage
         run: go test ./... -coverprofile=coverage.out
       - name: Upload coverage to DeepSource
-        if: ${{ secrets.DEEPSOURCE_DSN != '' }}
+        # if: ${{ secrets.DEEPSOURCE_DSN != '' }} # Disabled: context 'secrets' not allowed here
         uses: deepsourcelabs/test-coverage-action@master
         with:
           key: go

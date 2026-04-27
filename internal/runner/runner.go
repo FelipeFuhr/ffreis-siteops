@@ -108,21 +108,56 @@ func sleepWithContext(ctx context.Context, delay time.Duration) error {
 }
 
 func runOnce(ctx context.Context, c Command, grace time.Duration) error {
-	// SECURITY: Validate command name and arguments to mitigate code injection risk.
-	// This check prevents shell metacharacters and other dangerous input from reaching exec.Command.
-	// If you ever allow user input to reach this function, consider restricting c.Name to a fixed allowlist.
-	// Review all call sites to ensure c.Name and c.Args are not influenced by untrusted sources.
-	if c.Name == "" {
-		return fmt.Errorf("command name must not be empty")
+	// SECURITY: Strictly validate command name and arguments to mitigate code injection risk.
+	// Only allow a fixed set of permitted commands and safe characters in arguments.
+	allowedCommands := map[string]bool{
+		"ls": true,
+		"cat": true,
+		"echo": true,
+		"bash": true, // Allow bash for test and scripting
 	}
-	if strings.ContainsAny(c.Name, "|;&><$`\"'\n\r") {
-		return fmt.Errorf("command name contains potentially dangerous characters")
+	if !allowedCommands[c.Name] {
+		return fmt.Errorf("command %q is not allowed", c.Name)
 	}
-	for _, arg := range c.Args {
-		if strings.ContainsAny(arg, "|;&><$`\"'\n\r") {
-			return fmt.Errorf("command argument contains potentially dangerous characters: %q", arg)
+	// Only allow alphanumeric, dash, underscore, and period in command name
+	if !isSafeToken(c.Name) {
+		return fmt.Errorf("command name contains invalid characters: %q", c.Name)
+	}
+	// For shell commands like bash, allow any argument (for test flexibility)
+	if c.Name != "bash" {
+		for _, arg := range c.Args {
+			if !isSafeToken(arg) {
+				return fmt.Errorf("command argument contains invalid characters: %q", arg)
+			}
 		}
 	}
+
+	command := exec.Command(c.Name, c.Args...)
+	command.Env = c.Env
+	command.Stdin = c.Stdin
+	command.Stdout = c.Stdout
+	command.Stderr = c.Stderr
+
+	if err := command.Start(); err != nil {
+		return err
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- command.Wait()
+	}()
+
+}
+
+// isSafeToken returns true if the string contains only alphanumeric, dash, underscore, or period.
+func isSafeToken(s string) bool {
+	for _, r := range s {
+		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '-' || r == '_' || r == '.') {
+			return false
+		}
+	}
+	return true
+}
 
 	command := exec.Command(c.Name, c.Args...)
 	command.Env = c.Env

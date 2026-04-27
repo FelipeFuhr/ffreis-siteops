@@ -37,7 +37,7 @@ jobs:
       - name: Install Snyk
         run: npm install -g snyk
       - name: Snyk OSS Test (Go)
-        if: ${{ secrets.SNYK_TOKEN != '' }}
+        # if: ${{ secrets.SNYK_TOKEN != '' }} # Disabled: context 'secrets' not allowed here
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |

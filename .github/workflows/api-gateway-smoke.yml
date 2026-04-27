@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Smoke checks
-        if: ${{ secrets.STITCHER_SMOKE_BASE_URL != '' }}
+        # if: ${{ secrets.STITCHER_SMOKE_BASE_URL != '' }} # Disabled: context 'secrets' not allowed here
         env:
           BASE: ${{ secrets.STITCHER_SMOKE_BASE_URL }}
         run: |

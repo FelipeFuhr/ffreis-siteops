@@ -36,7 +36,7 @@ jobs:
       - name: Coverage for Sonar
         run: go test ./... -coverprofile=coverage.out
       - uses: SonarSource/sonarqube-scan-action@v4
-        if: ${{ secrets.SONAR_TOKEN != '' && secrets.SONAR_HOST_URL != '' }}
+        # if: ${{ secrets.SONAR_TOKEN != '' && secrets.SONAR_HOST_URL != '' }} # Disabled: context 'secrets' not allowed here
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
