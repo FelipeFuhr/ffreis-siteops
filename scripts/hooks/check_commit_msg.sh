@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-IFS=$'\n\t'
 
 commit_msg_file="${1:-}"
 if [ -z "${commit_msg_file}" ] || [ ! -f "${commit_msg_file}" ]; then

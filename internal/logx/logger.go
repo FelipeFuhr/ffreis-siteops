@@ -1,3 +1,4 @@
+const warnInvalidLogEnv = "invalid log env; using default"
 package logx
 
 import (
@@ -34,7 +35,7 @@ func newWithEnv(service string, getenv func(string) string, w io.Writer) *slog.L
 
 	if levelWarn != nil {
 		logger.Warn(
-			"invalid log env; using default",
+			warnInvalidLogEnv,
 			"key", "LOG_LEVEL",
 			"value", strings.TrimSpace(getenv("LOG_LEVEL")),
 			"default", "info",
@@ -43,7 +44,7 @@ func newWithEnv(service string, getenv func(string) string, w io.Writer) *slog.L
 
 	if formatWarn != nil {
 		logger.Warn(
-			"invalid log env; using default",
+			warnInvalidLogEnv,
 			"key", "LOG_FORMAT",
 			"value", strings.TrimSpace(getenv("LOG_FORMAT")),
 			"default", "text",
@@ -52,7 +53,7 @@ func newWithEnv(service string, getenv func(string) string, w io.Writer) *slog.L
 
 	if sourceWarn != nil {
 		logger.Warn(
-			"invalid log env; using default",
+			warnInvalidLogEnv,
 			"key", "LOG_SOURCE",
 			"value", strings.TrimSpace(getenv("LOG_SOURCE")),
 			"default", "false",

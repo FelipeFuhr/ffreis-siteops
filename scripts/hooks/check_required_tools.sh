@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-IFS=$'\n\t'
 
 if [ "$#" -eq 0 ]; then
   echo "Usage: $0 <tool> [tool...]" >&2

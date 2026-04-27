@@ -1,0 +1,7 @@
+organization=felipefuhr
+projectKey=felipefuhr_ffreis-siteops
+serverUrl=https://sonarcloud.io
+serverVersion=8.0.0.86098
+dashboardUrl=https://sonarcloud.io/dashboard?id=felipefuhr_ffreis-siteops
+ceTaskId=AZ3PeP4BCOisXKajhBMS
+ceTaskUrl=https://sonarcloud.io/api/ce/task?id=AZ3PeP4BCOisXKajhBMS

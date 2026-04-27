@@ -39,6 +39,8 @@ common_is_allowlisted_path() {
       ;;
     *) ;;
   esac
+  return 1
+  esac
 
   case "$ext" in
     png|jpg|jpeg|svg|webp|ico|woff|woff2|ttf)

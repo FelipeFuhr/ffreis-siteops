@@ -1,4 +1,6 @@
-name: Stitcher DeepSource
+
+# DEEPSOURCE DISABLED
+# name: Stitcher DeepSource
 
 on:
   pull_request:

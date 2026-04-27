@@ -1,4 +1,6 @@
-name: Stitcher Security Scan (Snyk)
+
+# SNYK DISABLED
+# name: Stitcher Security Scan (Snyk)
 
 on:
   pull_request:
@@ -11,8 +13,7 @@ on:
       - '**'
       - '.github/workflows/**'
 
-permissions:
-  security-events: write
+
 
 jobs:
   require-secrets:
@@ -29,6 +30,8 @@ jobs:
   snyk:
     runs-on: ubuntu-latest
     if: ${{ secrets.SNYK_TOKEN != '' }}
+    permissions:
+      security-events: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

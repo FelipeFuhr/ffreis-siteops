@@ -76,9 +76,12 @@ func normalizeOptions(opts Options) Options {
 }
 
 func attemptContext(parent context.Context, timeout time.Duration) (context.Context, func()) {
-	if timeout <= 0 {
-		return parent, func() {}
-	}
+		       if timeout <= 0 {
+			       // No timeout specified, so return the parent context and a no-op cancel function.
+			       // This is intentional: the caller expects a cancel function for symmetry.
+			       // The empty function below is a placeholder to match the context.WithTimeout signature.
+			       return parent, func() {} // no-op cancel function
+		       }
 	return context.WithTimeout(parent, timeout)
 }
 
@@ -105,6 +108,19 @@ func sleepWithContext(ctx context.Context, delay time.Duration) error {
 }
 
 func runOnce(ctx context.Context, c Command, grace time.Duration) error {
+	// Validate command name and arguments to mitigate code injection risk
+	if c.Name == "" {
+		return fmt.Errorf("command name must not be empty")
+	}
+	if strings.ContainsAny(c.Name, "|;&><$`\"'\n\r") {
+		return fmt.Errorf("command name contains potentially dangerous characters")
+	}
+	for _, arg := range c.Args {
+		if strings.ContainsAny(arg, "|;&><$`\"'\n\r") {
+			return fmt.Errorf("command argument contains potentially dangerous characters: %q", arg)
+		}
+	}
+
 	command := exec.Command(c.Name, c.Args...)
 	command.Env = c.Env
 	command.Stdin = c.Stdin
