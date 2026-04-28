@@ -145,12 +145,12 @@ func TestSleepWithContext_CompletesNormally(t *testing.T) {
 }
 
 func TestSleepWithContext_CancelDuringSleep(t *testing.T) {
-       ctx, cancel := context.WithCancel(context.Background())
-       go func() {
-	       time.Sleep(10 * time.Millisecond)
-	       cancel()
-       }()
-       err := SleepWithContext(ctx, 10*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(10 * time.Millisecond)
+		cancel()
+	}()
+	err := SleepWithContext(ctx, 10*time.Second)
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("expected Canceled, got %v", err)
 	}
@@ -173,41 +173,41 @@ func TestBackoff_Doubles(t *testing.T) {
 }
 
 func TestIsRetryable_NilError(t *testing.T) {
-       if IsRetryable(nil) {
-	       t.Error("nil error should not be retryable")
-       }
+	if IsRetryable(nil) {
+		t.Error("nil error should not be retryable")
+	}
 }
 
 func TestIsRetryable_ContextErrors(t *testing.T) {
-       if IsRetryable(context.Canceled) {
-	       t.Error("context.Canceled should not be retryable")
-       }
-       if IsRetryable(context.DeadlineExceeded) {
-	       t.Error("context.DeadlineExceeded should not be retryable")
-       }
+	if IsRetryable(context.Canceled) {
+		t.Error("context.Canceled should not be retryable")
+	}
+	if IsRetryable(context.DeadlineExceeded) {
+		t.Error("context.DeadlineExceeded should not be retryable")
+	}
 }
 
 func TestIsRetryable_ErrNotFound(t *testing.T) {
-       if IsRetryable(exec.ErrNotFound) {
-	       t.Error("ErrNotFound should not be retryable")
-       }
+	if IsRetryable(exec.ErrNotFound) {
+		t.Error("ErrNotFound should not be retryable")
+	}
 }
 
 func TestIsRetryable_TransientStrings(t *testing.T) {
-       cases := []struct {
-	       msg  string
-	       want bool
-       }{
-	       {"resource temporarily unavailable", true},
-	       {"connection reset by peer", true},
-	       {"TEMPORARILY UNAVAILABLE", true},
-	       {"CONNECTION RESET", true},
-	       {"some other error", false},
-       }
-       for _, tc := range cases {
-	       got := IsRetryable(errors.New(tc.msg))
-	       if got != tc.want {
-		       t.Errorf("IsRetryable(%q) = %v, want %v", tc.msg, got, tc.want)
-	       }
-       }
+	cases := []struct {
+		msg  string
+		want bool
+	}{
+		{"resource temporarily unavailable", true},
+		{"connection reset by peer", true},
+		{"TEMPORARILY UNAVAILABLE", true},
+		{"CONNECTION RESET", true},
+		{"some other error", false},
+	}
+	for _, tc := range cases {
+		got := IsRetryable(errors.New(tc.msg))
+		if got != tc.want {
+			t.Errorf("IsRetryable(%q) = %v, want %v", tc.msg, got, tc.want)
+		}
+	}
 }
