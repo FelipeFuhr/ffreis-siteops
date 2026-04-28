@@ -111,24 +111,24 @@ var SleepWithContext = func(ctx context.Context, delay time.Duration) error {
 var AllowedCommands = []string{"echo", "aws", "docker-compose", "siteops-compiler", "website-compiler-cli", "mock-website-compiler.sh", "bash"}
 
 var RunOnce = func(ctx context.Context, c Command, grace time.Duration) error {
-       // Basic validation: prevent empty or obviously dangerous command names
-       if strings.TrimSpace(c.Name) == "" {
-	       return fmt.Errorf("command name must not be empty")
-       }
-       if strings.ContainsAny(c.Name, ";&|$") {
-	       return fmt.Errorf("command name contains potentially dangerous characters: %q", c.Name)
-       }
-       allowed := false
-       base := filepath.Base(c.Name)
-       for _, cmd := range AllowedCommands {
-	       if c.Name == cmd || base == cmd {
-		       allowed = true
-		       break
-	       }
-       }
-       if !allowed {
-	       return fmt.Errorf("command %q is not in the allowed whitelist", c.Name)
-       }
+	// Basic validation: prevent empty or obviously dangerous command names
+	if strings.TrimSpace(c.Name) == "" {
+		return fmt.Errorf("command name must not be empty")
+	}
+	if strings.ContainsAny(c.Name, ";&|$") {
+		return fmt.Errorf("command name contains potentially dangerous characters: %q", c.Name)
+	}
+	allowed := false
+	base := filepath.Base(c.Name)
+	for _, cmd := range AllowedCommands {
+		if c.Name == cmd || base == cmd {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
+		return fmt.Errorf("command %q is not in the allowed whitelist", c.Name)
+	}
 	path, err := exec.LookPath(c.Name)
 	if err != nil {
 		return fmt.Errorf("resolving command %q: %w", c.Name, err)
