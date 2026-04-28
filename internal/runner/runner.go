@@ -105,9 +105,7 @@ func sleepWithContext(ctx context.Context, delay time.Duration) error {
 }
 
 func runOnce(ctx context.Context, c Command, grace time.Duration) error {
-	// Command and args come from trusted YAML config, not raw user input.
-	// nosemgrep: go.lang.security.audit.dangerous-exec-command.dangerous-exec-command
-	command := exec.Command(c.Name, c.Args...)
+	command := exec.Command(c.Name, c.Args...) // nosemgrep: go.lang.security.audit.dangerous-exec-command.dangerous-exec-command
 	command.Env = c.Env
 	command.Stdin = c.Stdin
 	command.Stdout = c.Stdout
@@ -183,4 +181,3 @@ func backoff(attempt int, base, max time.Duration) time.Duration {
 	}
 	return delay
 }
-
