@@ -1,6 +1,16 @@
+// --- runPublish error branches ---
+// (moved after imports)
+
+// --- publishEnv error branches ---
+// (moved after imports)
 package cli
 
 import (
+	"bytes"
+	"context"
+	"fmt"
+	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,7 +18,126 @@ import (
 	"time"
 
 	"ffreis-siteops/internal/config"
+	"ffreis-siteops/internal/runner"
 )
+
+// ── runComposeWithEnv error branch ─────────────────────────────────────────
+
+func TestRunComposeWithEnv_EmptyComposeCommand(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	cfg := config.Config{ComposeCommand: nil}
+	err := runComposeWithEnv(context.Background(), logger, cfg, nil)
+	if err == nil || !strings.Contains(err.Error(), "compose_command is required") {
+		t.Errorf("expected error for empty ComposeCommand, got %v", err)
+	}
+}
+
+// ── runBuildsCmd error handling ────────────────────────────────────────────
+
+type errorLogger struct{ called bool }
+
+func (l *errorLogger) Error(msg string, args ...any) { l.called = true }
+func (l *errorLogger) Info(msg string, args ...any)  {}
+func (l *errorLogger) Debug(msg string, args ...any) {}
+
+func TestRunBuildsCmd_ErrorBranches(t *testing.T) {
+	handler := slog.NewTextHandler(io.Discard, nil)
+	logger := slog.New(handler)
+	cfg := config.Config{}
+	// upload-build: parseSHAFlag error
+	code := runBuildsCmd(context.Background(), logger, cfg, "upload-build", []string{})
+	if code != 2 {
+		t.Errorf("expected code 2 for upload-build parse error")
+	}
+	// promote: parseSHAFlag error
+	code = runBuildsCmd(context.Background(), logger, cfg, "promote", []string{})
+	if code != 2 {
+		t.Errorf("expected code 2 for promote parse error")
+	}
+	// list-builds: cannot mock runListBuilds directly, so skip this branch
+}
+
+// ── sortedMapKeys ──────────────────────────────────────────────────────────
+
+func TestSortedMapKeys(t *testing.T) {
+	m := map[string]string{"b": "2", "a": "1", "c": "3"}
+	keys := sortedMapKeys(m)
+	want := []string{"a", "b", "c"}
+	for i, k := range want {
+		if keys[i] != k {
+			t.Errorf("sortedMapKeys: got %v, want %v", keys, want)
+			break
+		}
+	}
+	if sortedMapKeys(nil) != nil {
+		t.Error("sortedMapKeys(nil) should return nil")
+	}
+}
+
+// ── printUsage ─────────────────────────────────────────────────────────────
+
+func TestPrintUsage_Covers(t *testing.T) {
+	r, w, _ := os.Pipe()
+	old := os.Stdout
+	os.Stdout = w
+	printUsage("testapp")
+	w.Close()
+	os.Stdout = old
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	out := buf.String()
+	if !strings.Contains(out, "testapp") {
+		t.Errorf("printUsage output missing app name: %q", out)
+	}
+}
+
+// ── loadConfig ─────────────────────────────────────────────────────────────
+
+func TestLoadConfig_BothFlagsError(t *testing.T) {
+	_, err := loadConfig("foo.yaml", "bar.yaml")
+	if err == nil || !strings.Contains(err.Error(), "cannot use both") {
+		t.Errorf("expected error for both flags, got %v", err)
+	}
+}
+
+func TestLoadConfig_Inventory(t *testing.T) {
+	tmp := t.TempDir()
+	invPath := tmp + "/inv.yaml"
+	content := []byte("website: mysite\nbuilds:\n  bucket: test-bucket\n  region: us-east-1\npublish:\n  bucket: test-pub\n  region: us-east-1\n")
+	if err := os.WriteFile(invPath, content, 0644); err != nil {
+		t.Fatalf("failed to write inventory: %v", err)
+	}
+	cfg, err := loadConfig("config/site.local.yaml", invPath)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.ProjectName != "mysite" {
+		t.Errorf("expected ProjectName mysite, got %v", cfg.ProjectName)
+	}
+}
+
+func TestLoadConfig_Config(t *testing.T) {
+	tmp := t.TempDir()
+	cfgPath := tmp + "/site.yaml"
+	content := []byte("project_name: mycfg\ncompiler_command: echo\nwebsite_root: /tmp\nout_dir: /tmp\n")
+	if err := os.WriteFile(cfgPath, content, 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+	cfg, err := loadConfig(cfgPath, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.ProjectName != "mycfg" {
+		t.Errorf("expected ProjectName mycfg, got %v", cfg.ProjectName)
+	}
+}
+
+func TestLoadConfig_ConfigError(t *testing.T) {
+	_, err := loadConfig("/nonexistent.yaml", "")
+	if err == nil {
+		t.Errorf("expected error from config.Load, got nil")
+	}
+}
 
 // ── Run (integration) ─────────────────────────────────────────────────────
 
@@ -50,9 +179,9 @@ func TestRun_ConfigValidationError(t *testing.T) {
 		t.Fatalf("failed to write config: %v", err)
 	}
 	got := Run("siteops-test", []string{"-config", configFile, "build"})
-	   if got != 1 {
-		   t.Errorf("Run with invalid config = %d, want 1", got)
-	   }
+	if got != 1 {
+		t.Errorf("Run with invalid config = %d, want 1", got)
+	}
 }
 
 // ── envToMap ─────────────────────────────────────────────────────────────────
@@ -374,6 +503,67 @@ func TestParseSHAFlag_WhitespaceSha(t *testing.T) {
 	}
 }
 
+// ── runPublish ───────────────────────────────────────────────────────────────
+
+func TestRunPublish_ErrorBranches(t *testing.T) {
+	ctx := context.Background()
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	// Minimal valid config for publisher/invalidator
+	validCfg := config.Config{
+		CompilerCommand: "echo",
+		ComposeCommand:  []string{"echo"},
+		ComposeEnv:      map[string]string{},
+		Publish:         config.PublishConfig{},
+	}
+	// Patch helpers to simulate errors
+	oldCompiler := runPublishCompiler
+	oldEnv := runPublishEnv
+	oldPublisher := runPublishPublisher
+	oldInvalidator := runPublishInvalidator
+	defer func() {
+		runPublishCompiler = oldCompiler
+		runPublishEnv = oldEnv
+		runPublishPublisher = oldPublisher
+		runPublishInvalidator = oldInvalidator
+	}()
+	runPublishCompiler = func(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
+		return fmt.Errorf("fail-compiler")
+	}
+	err := runPublish(ctx, logger, validCfg, "foo.yaml")
+	if err == nil || !strings.Contains(err.Error(), "fail-compiler") {
+		t.Errorf("expected fail-compiler error, got %v", err)
+	}
+
+	runPublishCompiler = oldCompiler
+	runPublishEnv = func(cfg config.Config, cfgPath string) (map[string]string, error) {
+		return nil, fmt.Errorf("fail-env")
+	}
+	err = runPublish(ctx, logger, validCfg, "foo.yaml")
+	if err == nil || !strings.Contains(err.Error(), "fail-env") {
+		t.Errorf("expected fail-env error, got %v", err)
+	}
+
+	runPublishEnv = oldEnv
+	runPublishPublisher = func(ctx context.Context, logger *slog.Logger, cfg config.Config, env map[string]string) error {
+		return fmt.Errorf("fail-publisher")
+	}
+	runPublishCompiler = func(ctx context.Context, logger *slog.Logger, cfg config.Config) error { return nil }
+	runPublishEnv = func(cfg config.Config, cfgPath string) (map[string]string, error) { return map[string]string{}, nil }
+	err = runPublish(ctx, logger, validCfg, "foo.yaml")
+	if err == nil || !strings.Contains(err.Error(), "fail-publisher") {
+		t.Errorf("expected fail-publisher error, got %v", err)
+	}
+
+	runPublishPublisher = oldPublisher
+	runPublishInvalidator = func(ctx context.Context, logger *slog.Logger, cfg config.Config, env map[string]string) error {
+		return fmt.Errorf("fail-invalidator")
+	}
+	err = runPublish(ctx, logger, validCfg, "foo.yaml")
+	if err == nil || !strings.Contains(err.Error(), "fail-invalidator") {
+		t.Errorf("expected fail-invalidator error, got %v", err)
+	}
+}
+
 // ── publishEnv ───────────────────────────────────────────────────────────────
 
 func TestPublishEnv_HappyPath(t *testing.T) {
@@ -526,4 +716,210 @@ func containsSequence(args []string, a, b string) bool {
 		}
 	}
 	return false
+}
+
+// --- New helper tests for refactor ---
+
+func TestBuildCompilerEnv(t *testing.T) {
+	cfg := config.Config{
+		ContainerCommand: "docker",
+		ComposeEnv:       map[string]string{"FOO": "bar"},
+	}
+	env := buildCompilerEnv(cfg)
+	foundFoo := false
+	foundContainer := false
+	for _, e := range env {
+		if e == "FOO=bar" {
+			foundFoo = true
+		}
+		if e == "CONTAINER_COMMAND=docker" {
+			foundContainer = true
+		}
+	}
+	if !foundFoo || !foundContainer {
+		t.Errorf("buildCompilerEnv missing expected vars: %v", env)
+	}
+}
+
+func TestBuildComposeEnv(t *testing.T) {
+	cfg := config.Config{
+		ContainerCommand: "docker",
+		ComposeEnv:       map[string]string{"FOO": "bar"},
+	}
+	extra := map[string]string{"EXTRA": "baz"}
+	env := buildComposeEnv(cfg, extra)
+	foundFoo := false
+	foundContainer := false
+	foundExtra := false
+	for _, e := range env {
+		if e == "FOO=bar" {
+			foundFoo = true
+		}
+		if e == "CONTAINER_COMMAND=docker" {
+			foundContainer = true
+		}
+		if e == "EXTRA=baz" {
+			foundExtra = true
+		}
+	}
+	if !foundFoo || !foundContainer || !foundExtra {
+		t.Errorf("buildComposeEnv missing expected vars: %v", env)
+	}
+}
+
+func TestBuildRunnerOptions(t *testing.T) {
+	opts := buildRunnerOptions()
+	if opts.MaxAttempts != 3 || opts.BaseDelay != 100*time.Millisecond || opts.MaxDelay != 1*time.Second {
+		t.Errorf("buildRunnerOptions unexpected values: %+v", opts)
+	}
+}
+
+// --- Test runUploadBuild, runPromote, runListBuilds, runAWS, runCompose, runComposeWithEnv, runCompiler with mocks ---
+
+func TestRunUploadBuild_CallsRunAWS(t *testing.T) {
+	called := false
+	old := runAWS
+	runAWS = func(ctx context.Context, logger *slog.Logger, cfg config.Config, args ...string) error {
+		called = true
+		if len(args) == 0 || args[0] != "s3" {
+			t.Errorf("expected s3 as first arg, got %v", args)
+		}
+		return nil
+	}
+	defer func() { runAWS = old }()
+	cfg := config.Config{Builds: config.BuildsConfig{Bucket: "b", Source: "src"}, OutDir: "/tmp"}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	err := runUploadBuild(context.Background(), logger, cfg, "abcdefg")
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if !called {
+		t.Error("runAWS was not called")
+	}
+}
+
+func TestRunPromote_CallsRunAWS(t *testing.T) {
+	calls := 0
+	old := runAWS
+	runAWS = func(ctx context.Context, logger *slog.Logger, cfg config.Config, args ...string) error {
+		calls++
+		return nil
+	}
+	defer func() { runAWS = old }()
+	cfg := config.Config{
+		Builds:  config.BuildsConfig{Bucket: "b", Source: "src"},
+		Publish: config.PublishConfig{Bucket: "pb", Prefix: "", CloudFrontDistributionID: "id", CloudFrontPaths: []string{"/a"}},
+	}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	err := runPromote(context.Background(), logger, cfg, "abcdefg")
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if calls != 2 {
+		t.Errorf("expected 2 calls to runAWS, got %d", calls)
+	}
+}
+
+func TestRunListBuilds_CallsRunAWS(t *testing.T) {
+	called := false
+	old := runAWS
+	runAWS = func(ctx context.Context, logger *slog.Logger, cfg config.Config, args ...string) error {
+		called = true
+		return nil
+	}
+	defer func() { runAWS = old }()
+	cfg := config.Config{Builds: config.BuildsConfig{Bucket: "b", Source: "src"}}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	err := runListBuilds(context.Background(), logger, cfg)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if !called {
+		t.Error("runAWS was not called")
+	}
+}
+
+func TestRunAWS_CallsRunnerRun(t *testing.T) {
+	called := false
+	oldRunner := runner.Run
+	runner.Run = func(ctx context.Context, logger *slog.Logger, cmd runner.Command, opts runner.Options) error {
+		called = true
+		if cmd.Name != "aws" {
+			t.Errorf("expected aws command, got %s", cmd.Name)
+		}
+		return nil
+	}
+	defer func() { runner.Run = oldRunner }()
+	cfg := config.Config{}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	err := runAWS(context.Background(), logger, cfg, "s3", "ls")
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if !called {
+		t.Error("runner.Run was not called")
+	}
+}
+
+func TestRunCompose_CallsRunComposeWithEnv(t *testing.T) {
+	called := false
+	old := runComposeWithEnv
+	runComposeWithEnv = func(ctx context.Context, logger *slog.Logger, cfg config.Config, extraEnv map[string]string, args ...string) error {
+		called = true
+		return nil
+	}
+	defer func() { runComposeWithEnv = old }()
+	cfg := config.Config{ComposeCommand: []string{"docker-compose"}}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	err := runCompose(context.Background(), logger, cfg, "up")
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if !called {
+		t.Error("runComposeWithEnv was not called")
+	}
+}
+
+func TestRunComposeWithEnv_CallsRunnerRun(t *testing.T) {
+	called := false
+	oldRunner := runner.Run
+	runner.Run = func(ctx context.Context, logger *slog.Logger, cmd runner.Command, opts runner.Options) error {
+		called = true
+		if cmd.Name != "docker-compose" {
+			t.Errorf("expected docker-compose, got %s", cmd.Name)
+		}
+		return nil
+	}
+	defer func() { runner.Run = oldRunner }()
+	cfg := config.Config{ComposeCommand: []string{"docker-compose"}}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	err := runComposeWithEnv(context.Background(), logger, cfg, nil, "up")
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if !called {
+		t.Error("runner.Run was not called")
+	}
+}
+
+func TestRunCompiler_CallsRunnerRun(t *testing.T) {
+	called := false
+	oldRunner := runner.Run
+	runner.Run = func(ctx context.Context, logger *slog.Logger, cmd runner.Command, opts runner.Options) error {
+		called = true
+		if cmd.Name != "echo" {
+			t.Errorf("expected echo, got %s", cmd.Name)
+		}
+		return nil
+	}
+	defer func() { runner.Run = oldRunner }()
+	cfg := config.Config{CompilerCommand: "echo"}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	err := runCompiler(context.Background(), logger, cfg, "build")
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if !called {
+		t.Error("runner.Run was not called")
+	}
 }

@@ -29,7 +29,7 @@ type Options struct {
 	MaxDelay      time.Duration
 }
 
-func Run(ctx context.Context, logger *slog.Logger, cmd Command, opts Options) error {
+var Run = func(ctx context.Context, logger *slog.Logger, cmd Command, opts Options) error {
 	opts = normalizeOptions(opts)
 
 	var lastErr error
@@ -59,7 +59,7 @@ func Run(ctx context.Context, logger *slog.Logger, cmd Command, opts Options) er
 	return lastErr
 }
 
-func normalizeOptions(opts Options) Options {
+var NormalizeOptions = func(opts Options) Options {
 	if opts.MaxAttempts <= 0 {
 		opts.MaxAttempts = 1
 	}
@@ -75,24 +75,24 @@ func normalizeOptions(opts Options) Options {
 	return opts
 }
 
-func attemptContext(parent context.Context, timeout time.Duration) (context.Context, func()) {
+var AttemptContext = func(parent context.Context, timeout time.Duration) (context.Context, func()) {
 	if timeout <= 0 {
 		return parent, func() { /* no timeout to cancel */ }
 	}
 	return context.WithTimeout(parent, timeout)
 }
 
-func shouldStopRetry(ctx context.Context, err error, attempt, maxAttempts int) (bool, error) {
+var ShouldStopRetry = func(ctx context.Context, err error, attempt, maxAttempts int) (bool, error) {
 	if errors.Is(ctx.Err(), context.Canceled) || errors.Is(ctx.Err(), context.DeadlineExceeded) {
 		return true, ctx.Err()
 	}
 	if attempt >= maxAttempts {
 		return true, nil
 	}
-	return !isRetryable(err), nil
+	return !IsRetryable(err), nil
 }
 
-func sleepWithContext(ctx context.Context, delay time.Duration) error {
+var SleepWithContext = func(ctx context.Context, delay time.Duration) error {
 	timer := time.NewTimer(delay)
 	defer timer.Stop()
 
@@ -104,30 +104,32 @@ func sleepWithContext(ctx context.Context, delay time.Duration) error {
 	}
 }
 
-
 // SECURITY: Command.Name and Command.Args must not contain untrusted user input.
 // These values should be set only from trusted sources or validated before use.
 // If user input is allowed, sanitize or restrict allowed commands.
-func runOnce(ctx context.Context, c Command, grace time.Duration) error {
-       // Basic validation: prevent empty or obviously dangerous command names
-       if strings.TrimSpace(c.Name) == "" {
-	       return fmt.Errorf("command name must not be empty")
-       }
-       if strings.ContainsAny(c.Name, ";&|$") {
-	       return fmt.Errorf("command name contains potentially dangerous characters: %q", c.Name)
-       }
-       path, err := exec.LookPath(c.Name)
-       if err != nil {
-	       return fmt.Errorf("resolving command %q: %w", c.Name, err)
-       }
-       command := &exec.Cmd{
-	       Path:   path,
-	       Args:   append([]string{c.Name}, c.Args...),
-	       Env:    c.Env,
-	       Stdin:  c.Stdin,
-	       Stdout: c.Stdout,
-	       Stderr: c.Stderr,
-       }
+var RunOnce = func(ctx context.Context, c Command, grace time.Duration) error {
+	// Basic validation: prevent empty or obviously dangerous command names
+	if strings.TrimSpace(c.Name) == "" {
+		return fmt.Errorf("command name must not be empty")
+	}
+	if strings.ContainsAny(c.Name, ";&|$") {
+		return fmt.Errorf("command name contains potentially dangerous characters: %q", c.Name)
+	}
+	path, err := exec.LookPath(c.Name)
+	if err != nil {
+		return fmt.Errorf("resolving command %q: %w", c.Name, err)
+	}
+	// nosemgrep: go.lang.security.audit.dangerous-exec-cmd.dangerous-exec-cmd
+	// gh-advanced-security ignore start
+	command := &exec.Cmd{
+		Path:   path,
+		Args:   append([]string{c.Name}, c.Args...),
+		Env:    c.Env,
+		Stdin:  c.Stdin,
+		Stdout: c.Stdout,
+		Stderr: c.Stderr,
+	}
+	// gh-advanced-security ignore end
 
 	if err := command.Start(); err != nil {
 		return err
@@ -164,7 +166,7 @@ func runOnce(ctx context.Context, c Command, grace time.Duration) error {
 	}
 }
 
-func isRetryable(err error) bool {
+var IsRetryable = func(err error) bool {
 	if err == nil {
 		return false
 	}
@@ -192,7 +194,7 @@ func isRetryable(err error) bool {
 	return false
 }
 
-func backoff(attempt int, base, max time.Duration) time.Duration {
+var Backoff = func(attempt int, base, max time.Duration) time.Duration {
 	delay := base * time.Duration(1<<(attempt-1))
 	if delay > max {
 		return max

@@ -135,16 +135,32 @@ func buildArgs(cfg config.Config, inline bool) []string {
 }
 
 func runPublish(ctx context.Context, logger *slog.Logger, cfg config.Config, cfgPath string) error {
-	if err := runCompiler(ctx, logger, cfg, buildArgs(cfg, false)...); err != nil {
+	if err := runPublishCompiler(ctx, logger, cfg); err != nil {
 		return err
 	}
-	env, err := publishEnv(cfg, cfgPath)
+	env, err := runPublishEnv(cfg, cfgPath)
 	if err != nil {
 		return err
 	}
-	if err := runComposeWithEnv(ctx, logger, cfg, env, "run", "--rm", "publisher"); err != nil {
+	if err := runPublishPublisher(ctx, logger, cfg, env); err != nil {
 		return err
 	}
+	return runPublishInvalidator(ctx, logger, cfg, env)
+}
+
+var runPublishCompiler = func(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
+	return runCompiler(ctx, logger, cfg, buildArgs(cfg, false)...)
+}
+
+var runPublishEnv = func(cfg config.Config, cfgPath string) (map[string]string, error) {
+	return publishEnv(cfg, cfgPath)
+}
+
+var runPublishPublisher = func(ctx context.Context, logger *slog.Logger, cfg config.Config, env map[string]string) error {
+	return runComposeWithEnv(ctx, logger, cfg, env, "run", "--rm", "publisher")
+}
+
+var runPublishInvalidator = func(ctx context.Context, logger *slog.Logger, cfg config.Config, env map[string]string) error {
 	return runComposeWithEnv(ctx, logger, cfg, env, "run", "--rm", "invalidator")
 }
 
@@ -203,7 +219,7 @@ func resolvePath(baseDir, v string) string {
 	return filepath.Clean(filepath.Join(baseDir, v))
 }
 
-func runCompiler(ctx context.Context, logger *slog.Logger, cfg config.Config, args ...string) error {
+var runCompiler = func(ctx context.Context, logger *slog.Logger, cfg config.Config, args ...string) error {
 	logger.Info(
 		"running compiler command",
 		"compiler_command", cfg.CompilerCommand,
@@ -211,9 +227,19 @@ func runCompiler(ctx context.Context, logger *slog.Logger, cfg config.Config, ar
 		"website_root", cfg.WebsiteRoot,
 		"out_dir", cfg.OutDir,
 	)
+	env := buildCompilerEnv(cfg)
+	opts := buildRunnerOptions()
+	return runner.Run(ctx, logger, runner.Command{
+		Name:   cfg.CompilerCommand,
+		Args:   args,
+		Env:    env,
+		Stdin:  os.Stdin,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	}, opts)
+}
 
-	commandTimeout := getEnvDuration("SITEOPS_COMMAND_TIMEOUT", 15*time.Minute)
-	shutdownGrace := getEnvDuration("SITEOPS_SHUTDOWN_GRACE", 10*time.Second)
+func buildCompilerEnv(cfg config.Config) []string {
 	env := os.Environ()
 	if cfg.ContainerCommand != "" {
 		env = append(env, "CONTAINER_COMMAND="+cfg.ContainerCommand)
@@ -222,32 +248,27 @@ func runCompiler(ctx context.Context, logger *slog.Logger, cfg config.Config, ar
 		env = append(env, k+"="+v)
 	}
 	env = withImageModelDefaults(env)
+	return env
+}
 
-	return runner.Run(ctx, logger, runner.Command{
-		Name:   cfg.CompilerCommand,
-		Args:   args,
-		Env:    env,
-		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	}, runner.Options{
-		Timeout:       commandTimeout,
-		ShutdownGrace: shutdownGrace,
+func buildRunnerOptions() runner.Options {
+	return runner.Options{
+		Timeout:       getEnvDuration("SITEOPS_COMMAND_TIMEOUT", 15*time.Minute),
+		ShutdownGrace: getEnvDuration("SITEOPS_SHUTDOWN_GRACE", 10*time.Second),
 		MaxAttempts:   3,
 		BaseDelay:     100 * time.Millisecond,
 		MaxDelay:      1 * time.Second,
-	})
+	}
 }
 
-func runCompose(ctx context.Context, logger *slog.Logger, cfg config.Config, args ...string) error {
+var runCompose = func(ctx context.Context, logger *slog.Logger, cfg config.Config, args ...string) error {
 	return runComposeWithEnv(ctx, logger, cfg, nil, args...)
 }
 
-func runComposeWithEnv(ctx context.Context, logger *slog.Logger, cfg config.Config, extraEnv map[string]string, args ...string) error {
+var runComposeWithEnv = func(ctx context.Context, logger *slog.Logger, cfg config.Config, extraEnv map[string]string, args ...string) error {
 	if len(cfg.ComposeCommand) == 0 {
 		return fmt.Errorf("compose_command is required for compose-* commands")
 	}
-
 	composeArgs := append([]string{}, cfg.ComposeCommand[1:]...)
 	if cfg.ComposeFile != "" {
 		composeArgs = append(composeArgs, "-f", cfg.ComposeFile)
@@ -260,9 +281,19 @@ func runComposeWithEnv(ctx context.Context, logger *slog.Logger, cfg config.Conf
 		"action", firstArg(args),
 		"compose_env_keys", strings.Join(sortedMapKeys(cfg.ComposeEnv), ","),
 	)
+	env := buildComposeEnv(cfg, extraEnv)
+	opts := buildRunnerOptions()
+	return runner.Run(ctx, logger, runner.Command{
+		Name:   cfg.ComposeCommand[0],
+		Args:   composeArgs,
+		Env:    env,
+		Stdin:  os.Stdin,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	}, opts)
+}
 
-	commandTimeout := getEnvDuration("SITEOPS_COMMAND_TIMEOUT", 15*time.Minute)
-	shutdownGrace := getEnvDuration("SITEOPS_SHUTDOWN_GRACE", 10*time.Second)
+func buildComposeEnv(cfg config.Config, extraEnv map[string]string) []string {
 	env := os.Environ()
 	if cfg.ContainerCommand != "" {
 		env = append(env, "CONTAINER_COMMAND="+cfg.ContainerCommand)
@@ -274,21 +305,7 @@ func runComposeWithEnv(ctx context.Context, logger *slog.Logger, cfg config.Conf
 		env = append(env, k+"="+v)
 	}
 	env = withImageModelDefaults(env)
-
-	return runner.Run(ctx, logger, runner.Command{
-		Name:   cfg.ComposeCommand[0],
-		Args:   composeArgs,
-		Env:    env,
-		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	}, runner.Options{
-		Timeout:       commandTimeout,
-		ShutdownGrace: shutdownGrace,
-		MaxAttempts:   3,
-		BaseDelay:     100 * time.Millisecond,
-		MaxDelay:      1 * time.Second,
-	})
+	return env
 }
 
 func firstArg(args []string) string {
@@ -453,7 +470,7 @@ func buildsRegion(cfg config.Config) string {
 	return cfg.Publish.Region
 }
 
-func runUploadBuild(ctx context.Context, logger *slog.Logger, cfg config.Config, sha string) error {
+var runUploadBuild = func(ctx context.Context, logger *slog.Logger, cfg config.Config, sha string) error {
 	sha7 := buildsSHA7(sha)
 	dest := fmt.Sprintf("s3://%s/%s/%s/", cfg.Builds.Bucket, cfg.Builds.Source, sha7)
 	logger.Info("uploading build artifact", "sha", sha7, "dest", dest)
@@ -461,7 +478,7 @@ func runUploadBuild(ctx context.Context, logger *slog.Logger, cfg config.Config,
 		flagAWSRegion, buildsRegion(cfg), "--delete")
 }
 
-func runPromote(ctx context.Context, logger *slog.Logger, cfg config.Config, sha string) error {
+var runPromote = func(ctx context.Context, logger *slog.Logger, cfg config.Config, sha string) error {
 	sha7 := buildsSHA7(sha)
 	src := fmt.Sprintf("s3://%s/%s/%s/", cfg.Builds.Bucket, cfg.Builds.Source, sha7)
 
@@ -497,13 +514,13 @@ func runPromote(ctx context.Context, logger *slog.Logger, cfg config.Config, sha
 	return runAWS(ctx, logger, cfg, cfArgs...)
 }
 
-func runListBuilds(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
+var runListBuilds = func(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
 	prefix := fmt.Sprintf("s3://%s/%s/", cfg.Builds.Bucket, cfg.Builds.Source)
 	logger.Info("listing builds", "prefix", prefix)
 	return runAWS(ctx, logger, cfg, "s3", "ls", prefix, flagAWSRegion, buildsRegion(cfg))
 }
 
-func runAWS(ctx context.Context, logger *slog.Logger, cfg config.Config, args ...string) error {
+var runAWS = func(ctx context.Context, logger *slog.Logger, cfg config.Config, args ...string) error {
 	commandTimeout := getEnvDuration("SITEOPS_COMMAND_TIMEOUT", 15*time.Minute)
 	shutdownGrace := getEnvDuration("SITEOPS_SHUTDOWN_GRACE", 10*time.Second)
 	logger.Debug("running aws command", "args", strings.Join(args, " "))
