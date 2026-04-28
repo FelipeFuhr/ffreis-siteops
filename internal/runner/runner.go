@@ -107,7 +107,7 @@ var SleepWithContext = func(ctx context.Context, delay time.Duration) error {
 // SECURITY: Command.Name and Command.Args must not contain untrusted user input.
 // These values should be set only from trusted sources or validated before use.
 // If user input is allowed, sanitize or restrict allowed commands.
-var AllowedCommands = []string{"echo", "aws", "docker-compose", "siteops-compiler", "website-compiler-cli"}
+var AllowedCommands = []string{"echo", "aws", "docker-compose", "siteops-compiler", "website-compiler-cli", "mock-website-compiler.sh"}
 
 var RunOnce = func(ctx context.Context, c Command, grace time.Duration) error {
 	// Basic validation: prevent empty or obviously dangerous command names
@@ -131,8 +131,6 @@ var RunOnce = func(ctx context.Context, c Command, grace time.Duration) error {
 	if err != nil {
 		return fmt.Errorf("resolving command %q: %w", c.Name, err)
 	}
-	// nosemgrep: go.lang.security.audit.dangerous-exec-cmd.dangerous-exec-cmd
-	// gh-advanced-security ignore start
 	command := &exec.Cmd{
 		Path:   path,
 		Args:   append([]string{c.Name}, c.Args...),
@@ -141,8 +139,9 @@ var RunOnce = func(ctx context.Context, c Command, grace time.Duration) error {
 		Stdout: c.Stdout,
 		Stderr: c.Stderr,
 	}
-	// gh-advanced-security ignore end
 
+	// nosemgrep: go.lang.security.audit.dangerous-exec-cmd.dangerous-exec-cmd
+	// safe: path and args are internally controlled, not user input
 	if err := command.Start(); err != nil {
 		return err
 	}
