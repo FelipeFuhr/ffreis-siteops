@@ -38,11 +38,15 @@ common_is_allowlisted_path() {
     testdata/*|*/testdata/*|examples/*|*/examples/*)
       return 0
       ;;
+    *)
+      ;;
   esac
 
   case "$ext" in
     png|jpg|jpeg|svg|webp|ico|woff|woff2|ttf)
       return 0
+      ;;
+    *)
       ;;
   esac
 
