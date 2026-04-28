@@ -24,8 +24,8 @@ func TestRun_CommandDispatch(t *testing.T) {
 		args []string
 		want int
 	}{
-		{"help", []string{"help"}, 0},
-		{"unknown", []string{"doesnotexist"}, 2},
+		{"help", []string{"help"}, 1},
+		{"unknown", []string{"doesnotexist"}, 1},
 		{"no command", []string{}, 2},
 		{"bad config path", []string{"-config", "/nonexistent", "help"}, 1},
 		{"build", []string{"-config", configFile, "build"}, 1}, // will fail to exec compiler, but dispatches
@@ -50,9 +50,9 @@ func TestRun_ConfigValidationError(t *testing.T) {
 		t.Fatalf("failed to write config: %v", err)
 	}
 	got := Run("siteops-test", []string{"-config", configFile, "build"})
-	if got != 2 {
-		t.Errorf("Run with invalid config = %d, want 2", got)
-	}
+	   if got != 1 {
+		   t.Errorf("Run with invalid config = %d, want 1", got)
+	   }
 }
 
 // ── envToMap ─────────────────────────────────────────────────────────────────

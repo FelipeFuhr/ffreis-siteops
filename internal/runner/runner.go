@@ -104,19 +104,30 @@ func sleepWithContext(ctx context.Context, delay time.Duration) error {
 	}
 }
 
+
+// SECURITY: Command.Name and Command.Args must not contain untrusted user input.
+// These values should be set only from trusted sources or validated before use.
+// If user input is allowed, sanitize or restrict allowed commands.
 func runOnce(ctx context.Context, c Command, grace time.Duration) error {
-	path, err := exec.LookPath(c.Name)
-	if err != nil {
-		return fmt.Errorf("resolving command %q: %w", c.Name, err)
-	}
-	command := &exec.Cmd{
-		Path:   path,
-		Args:   append([]string{c.Name}, c.Args...),
-		Env:    c.Env,
-		Stdin:  c.Stdin,
-		Stdout: c.Stdout,
-		Stderr: c.Stderr,
-	}
+       // Basic validation: prevent empty or obviously dangerous command names
+       if strings.TrimSpace(c.Name) == "" {
+	       return fmt.Errorf("command name must not be empty")
+       }
+       if strings.ContainsAny(c.Name, ";&|$") {
+	       return fmt.Errorf("command name contains potentially dangerous characters: %q", c.Name)
+       }
+       path, err := exec.LookPath(c.Name)
+       if err != nil {
+	       return fmt.Errorf("resolving command %q: %w", c.Name, err)
+       }
+       command := &exec.Cmd{
+	       Path:   path,
+	       Args:   append([]string{c.Name}, c.Args...),
+	       Env:    c.Env,
+	       Stdin:  c.Stdin,
+	       Stdout: c.Stdout,
+	       Stderr: c.Stderr,
+       }
 
 	if err := command.Start(); err != nil {
 		return err
