@@ -39,7 +39,7 @@ mutation-test: ## Run mutation testing with gremlins (slow — CI only)
 	@which gremlins >/dev/null 2>&1 || go install github.com/go-gremlins/gremlins/cmd/gremlins@latest
 	gremlins unleash --threshold-efficacy $(MUTATION_THRESHOLD) $(MUTATION_PACKAGES)
 
-help: ## Show stitcher commands
+help: ## Show siteops commands
 	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target> [CONFIG=path/to/config.yaml]\n\nTargets:\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 info: ## Print effective variables
@@ -117,7 +117,7 @@ test-race: ## Run tests with race detector
 coverage-gate: ## Run tests with coverage and fail if below COVERAGE_MIN
 	@COVERAGE_MIN="$(COVERAGE_MIN)" ./scripts/hooks/check_coverage_gate.sh
 
-smoke-check: ## Build hello-world through stitcher and assert output
+smoke-check: ## Build hello-world through siteops and assert output
 	@set -euo pipefail; \
 	./scripts/hooks/check_required_tools.sh go "$(WEBSITE_COMPILER_BIN)"; \
 	tmp_dir="$$(mktemp -d)"; \
@@ -135,7 +135,7 @@ smoke-check: ## Build hello-world through stitcher and assert output
 		'default_addr: ":18080"' \
 		"container_command: \"$(CONTAINER_COMMAND)\"" \
 		> "$$tmp_dir/smoke.yaml"; \
-	go run ./cmd/website-stitcher -config "$$tmp_dir/smoke.yaml" build; \
+	go run ./cmd/siteops -config "$$tmp_dir/smoke.yaml" build; \
 	test -f "$$tmp_dir/dist/index.html"
 
 secrets-scan-staged: ## Scan staged diff for secrets

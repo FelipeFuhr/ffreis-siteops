@@ -26,7 +26,7 @@ compose_env:
   IMAGE_PROVIDER:   ""
   IMAGE_TAG:        "local"
   COMPILER_IMAGE_NAME: "website-compiler-cli"
-  STITCHER_IMAGE_NAME: "website-compiler-watch"
+  COMPILER_WATCH_IMAGE_NAME: "website-compiler-watch"
   # Required by the publisher and invalidator services in docker-compose.yml.
   PUBLISH_SCRIPT:    "./website/my-siteops/scripts/publish.sh"
   INVALIDATE_SCRIPT: "./website/my-siteops/scripts/cloudfront-invalidate.sh"

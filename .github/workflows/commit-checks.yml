@@ -1,4 +1,4 @@
-name: Stitcher Commit Checks
+name: Siteops Commit Checks
 
 on:
   pull_request:

@@ -77,10 +77,7 @@ func normalizeOptions(opts Options) Options {
 
 func attemptContext(parent context.Context, timeout time.Duration) (context.Context, func()) {
 	if timeout <= 0 {
-		// No timeout specified, so return the parent context and a no-op cancel function.
-		// This is intentional: the caller expects a cancel function for symmetry.
-		// The empty function below is a placeholder to match the context.WithTimeout signature.
-		return parent, func() {} // no-op cancel function
+		return parent, func() { /* no timeout to cancel */ }
 	}
 	return context.WithTimeout(parent, timeout)
 }
@@ -108,22 +105,6 @@ func sleepWithContext(ctx context.Context, delay time.Duration) error {
 }
 
 func runOnce(ctx context.Context, c Command, grace time.Duration) error {
-	// SECURITY: Strictly validate command name and arguments to mitigate code injection risk.
-	// Only allow a fixed set of permitted commands and safe characters in arguments.
-	allowedCommands := map[string]bool{
-		"ls": true,
-		"cat": true,
-		"echo": true,
-		"bash": true, // Allow bash for test and scripting
-	}
-	if !allowedCommands[c.Name] {
-		return fmt.Errorf("command %q is not allowed", c.Name)
-	}
-	// Only allow alphanumeric, dash, underscore, and period in command name
-	if !isSafeToken(c.Name) {
-		return fmt.Errorf("command name contains invalid characters: %q", c.Name)
-	}
-	// For shell commands like bash, allow any argument (for test flexibility)
 	if c.Name != "bash" {
 		for _, arg := range c.Args {
 			if !isSafeToken(arg) {
@@ -132,34 +113,21 @@ func runOnce(ctx context.Context, c Command, grace time.Duration) error {
 		}
 	}
 
-	command := exec.Command(c.Name, c.Args...)
-	command.Env = c.Env
-	command.Stdin = c.Stdin
-	command.Stdout = c.Stdout
-	command.Stderr = c.Stderr
-
-	if err := command.Start(); err != nil {
-		return err
+	// Use static string literals per case so the command name is never a variable
+	// passed directly to exec.Command.
+	var command *exec.Cmd
+	switch c.Name {
+	case "ls":
+		command = exec.Command("ls", c.Args...)
+	case "cat":
+		command = exec.Command("cat", c.Args...)
+	case "echo":
+		command = exec.Command("echo", c.Args...)
+	case "bash":
+		command = exec.Command("bash", c.Args...)
+	default:
+		return fmt.Errorf("command %q is not allowed", c.Name)
 	}
-
-	done := make(chan error, 1)
-	go func() {
-		done <- command.Wait()
-	}()
-
-}
-
-// isSafeToken returns true if the string contains only alphanumeric, dash, underscore, or period.
-func isSafeToken(s string) bool {
-	for _, r := range s {
-		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '-' || r == '_' || r == '.') {
-			return false
-		}
-	}
-	return true
-}
-
-	command := exec.Command(c.Name, c.Args...)
 	command.Env = c.Env
 	command.Stdin = c.Stdin
 	command.Stdout = c.Stdout
@@ -204,15 +172,12 @@ func isRetryable(err error) bool {
 	if err == nil {
 		return false
 	}
-
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return false
 	}
-
 	if errors.Is(err, exec.ErrNotFound) {
 		return false
 	}
-
 	var exitErr *exec.ExitError
 	if errors.As(err, &exitErr) {
 		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
@@ -224,12 +189,10 @@ func isRetryable(err error) bool {
 			}
 		}
 	}
-
 	lower := strings.ToLower(err.Error())
 	if strings.Contains(lower, "temporarily unavailable") || strings.Contains(lower, "connection reset") {
 		return true
 	}
-
 	return false
 }
 
@@ -239,4 +202,13 @@ func backoff(attempt int, base, max time.Duration) time.Duration {
 		return max
 	}
 	return delay
+}
+
+func isSafeToken(s string) bool {
+	for _, r := range s {
+		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '-' || r == '_' || r == '.') {
+			return false
+		}
+	}
+	return true
 }

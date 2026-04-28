@@ -1,4 +1,4 @@
-name: Stitcher Unit Tests
+name: Siteops Unit Tests
 
 on:
   pull_request:

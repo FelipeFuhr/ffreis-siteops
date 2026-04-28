@@ -1,4 +1,4 @@
-name: Stitcher Code Security (Go)
+name: Siteops Code Security (Go)
 
 on:
   pull_request:

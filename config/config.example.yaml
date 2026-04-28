@@ -29,19 +29,19 @@ compose_env:
   OUT_DIR: "path-to-build-output"
   INLINE_ASSETS: "false"
   COPY_ASSETS: "true"
-  STITCHER_WATCH_PATH: "."
+  COMPILER_WATCH_PATH: "."
   # Image model aligned with ffreis-python-onnx-model-converter
   PREFIX: "myorg"
   IMAGE_PROVIDER: ""
   IMAGE_TAG: "local"
   COMPILER_IMAGE_NAME: "website-compiler-cli"
-  STITCHER_IMAGE_NAME: "website-compiler-watch"
-  # Optional full override for stitcher watch image.
-  STITCHER_IMAGE: "myorg/website-compiler-watch:local"
-  # Optional full override for compiler image used in stitcher build.
+  COMPILER_WATCH_IMAGE_NAME: "website-compiler-watch"
+  # Optional full override for compiler-watch image.
+  COMPILER_WATCH_IMAGE: "myorg/website-compiler-watch:local"
+  # Optional full override for compiler image used in compiler-watch build.
   WEBSITE_COMPILER_IMAGE: "myorg/website-compiler-cli:local"
-  # Optional override for stitcher watch runtime base image.
-  STITCHER_RUNTIME_IMAGE: "debian:bookworm-slim"
+  # Optional override for compiler-watch runtime base image.
+  COMPILER_WATCH_RUNTIME_IMAGE: "debian:bookworm-slim"
   # Optional full override for preview container image
   PREVIEW_IMAGE: "nginx:alpine"
 

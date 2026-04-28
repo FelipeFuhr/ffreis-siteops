@@ -1,4 +1,4 @@
-name: Stitcher Build All (Go Matrix)
+name: Siteops Build All (Go Matrix)
 
 on:
   pull_request:
@@ -30,4 +30,4 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
-        run: go build ./cmd/website-stitcher
+        run: go build ./cmd/siteops

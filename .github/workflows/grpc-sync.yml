@@ -1,4 +1,4 @@
-name: Stitcher gRPC Sync
+name: Siteops gRPC Sync
 
 on:
   pull_request:
