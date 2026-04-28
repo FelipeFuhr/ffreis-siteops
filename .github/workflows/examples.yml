@@ -15,8 +15,8 @@ jobs:
         with:
           go-version: '1.25.8'
           cache: true
-      - name: Build stitcher binary
-        run: go build -o website-stitcher ./cmd/website-stitcher
+      - name: Build siteops binary
+        run: go build -o siteops ./cmd/siteops
       - name: Create mock compiler
         run: |
           cat > /tmp/mock-website-compiler.sh <<'EOF'
@@ -41,16 +41,16 @@ jobs:
           chmod +x /tmp/mock-website-compiler.sh
       - name: Example build from temporary config
         run: |
-          cat > /tmp/stitcher-example.yaml <<'EOF'
+          cat > /tmp/siteops-example.yaml <<'EOF'
           project_name: "example"
           compiler_command: "/tmp/mock-website-compiler.sh"
           website_root: "."
-          out_dir: "/tmp/stitcher-example-dist"
+          out_dir: "/tmp/siteops-example-dist"
           default_addr: ":8080"
           container_command: "podman"
           compose_command: ["./compose.sh"]
           compose_file: "./docker-compose.yml"
           compose_env: {}
           EOF
-          ./website-stitcher -config /tmp/stitcher-example.yaml build
-          test -f /tmp/stitcher-example-dist/index.html
+          ./siteops -config /tmp/siteops-example.yaml build
+          test -f /tmp/siteops-example-dist/index.html

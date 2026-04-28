@@ -1,4 +1,4 @@
-name: Stitcher API Gateway Smoke
+name: Siteops API Gateway Smoke
 
 on:
   workflow_dispatch:
@@ -12,18 +12,18 @@ jobs:
       - name: Validate required secrets
         shell: bash
         env:
-          STITCHER_SMOKE_BASE_URL: ${{ secrets.STITCHER_SMOKE_BASE_URL }}
+          SITEOPS_SMOKE_BASE_URL: ${{ secrets.SITEOPS_SMOKE_BASE_URL }}
         run: |
           set -euo pipefail
-          [ -n "${STITCHER_SMOKE_BASE_URL}" ] || (echo "Missing required secret: STITCHER_SMOKE_BASE_URL" >&2; exit 1)
+          [ -n "${SITEOPS_SMOKE_BASE_URL}" ] || (echo "Missing required secret: SITEOPS_SMOKE_BASE_URL" >&2; exit 1)
 
   smoke:
     runs-on: ubuntu-latest
     steps:
       - name: Smoke checks
-        # if: ${{ secrets.STITCHER_SMOKE_BASE_URL != '' }} # Disabled: context 'secrets' not allowed here
+        # if: ${{ secrets.SITEOPS_SMOKE_BASE_URL != '' }} # Disabled: context 'secrets' not allowed here
         env:
-          BASE: ${{ secrets.STITCHER_SMOKE_BASE_URL }}
+          BASE: ${{ secrets.SITEOPS_SMOKE_BASE_URL }}
         run: |
           set -euo pipefail
           curl -fsS "$BASE/" >/dev/null

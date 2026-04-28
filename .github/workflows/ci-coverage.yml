@@ -1,4 +1,4 @@
-name: Siteops Lint
+name: Siteops Coverage (Codecov)
 
 on:
   pull_request:
@@ -12,7 +12,7 @@ on:
       - '.github/workflows/**'
 
 jobs:
-  golangci:
+  coverage:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,9 +20,12 @@ jobs:
         with:
           go-version: '1.25.8'
           cache: true
-      - uses: golangci/golangci-lint-action@2f856675483cb8b9378ee77ee0beb67955aca9d7 # v6
+      - run: go test ./... -coverprofile=coverage.out -covermode=atomic
+      - uses: actions/upload-artifact@v4
         with:
-          version: latest
-          install-mode: goinstall
-          skip-cache: true
-          working-directory: .
+          name: siteops-coverage
+          path: coverage.out
+      - uses: codecov/codecov-action@v4
+        with:
+          files: coverage.out
+          fail_ci_if_error: false

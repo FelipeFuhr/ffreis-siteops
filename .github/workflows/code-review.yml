@@ -1,4 +1,4 @@
-name: Stitcher Code Review (Lint + Test)
+name: Siteops Code Review (Lint + Test)
 
 on:
   pull_request:

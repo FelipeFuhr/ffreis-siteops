@@ -20,8 +20,8 @@ jobs:
         with:
           go-version: '1.25.8'
           cache: true
-      - name: Build stitcher binary
-        run: go build -o website-stitcher ./cmd/website-stitcher
+      - name: Build siteops binary
+        run: go build -o siteops ./cmd/siteops
       - name: Create mock compiler
         run: |
           cat > /tmp/mock-website-compiler.sh <<'EOF'
@@ -46,22 +46,22 @@ jobs:
           printf '<html><body>%s ok</body></html>\n' "$command_name" > "$out/index.html"
           EOF
           chmod +x /tmp/mock-website-compiler.sh
-      - name: Stitcher build smoke
+      - name: Siteops build smoke
         run: |
-          cat > /tmp/stitcher-ci.yaml <<'EOF'
+          cat > /tmp/siteops-ci.yaml <<'EOF'
           project_name: "ci"
           compiler_command: "/tmp/mock-website-compiler.sh"
           website_root: "."
-          out_dir: "/tmp/stitcher-dist"
+          out_dir: "/tmp/siteops-dist"
           default_addr: ":8080"
           container_command: "podman"
           compose_command: ["./compose.sh"]
           compose_file: "./docker-compose.yml"
           compose_env: {}
           EOF
-          ./website-stitcher -config /tmp/stitcher-ci.yaml build-inline
-          test -f /tmp/stitcher-dist/index.html
+          ./siteops -config /tmp/siteops-ci.yaml build-inline
+          test -f /tmp/siteops-dist/index.html
       - uses: actions/upload-artifact@v4
         with:
-          name: stitcher-built-site
-          path: /tmp/stitcher-dist
+          name: siteops-built-site
+          path: /tmp/siteops-dist

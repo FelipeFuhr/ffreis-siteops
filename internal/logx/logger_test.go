@@ -8,7 +8,7 @@ import (
 
 func TestNewWithEnv_DefaultTextInfo(t *testing.T) {
 	var buf bytes.Buffer
-	logger := newWithEnv("website-stitcher", emptyEnv, &buf)
+	logger := newWithEnv("siteops", emptyEnv, &buf)
 
 	logger.Info("hello", "component", "test")
 	logger.Debug("debug-hidden")
@@ -17,7 +17,7 @@ func TestNewWithEnv_DefaultTextInfo(t *testing.T) {
 	if !strings.Contains(out, "level=INFO") {
 		t.Fatalf("expected text INFO level log, got: %s", out)
 	}
-	if !strings.Contains(out, "service=website-stitcher") {
+	if !strings.Contains(out, "service=siteops") {
 		t.Fatalf("expected service field in output, got: %s", out)
 	}
 	if strings.Contains(out, "debug-hidden") {
@@ -31,14 +31,14 @@ func TestNewWithEnv_JSONFormat(t *testing.T) {
 		"LOG_FORMAT": "json",
 		"LOG_LEVEL":  "debug",
 	})
-	logger := newWithEnv("website-stitcher", env, &buf)
+	logger := newWithEnv("siteops", env, &buf)
 	logger.Debug("json-debug")
 
 	out := buf.String()
 	if !strings.Contains(out, "\"level\":\"DEBUG\"") {
 		t.Fatalf("expected JSON debug level log, got: %s", out)
 	}
-	if !strings.Contains(out, "\"service\":\"website-stitcher\"") {
+	if !strings.Contains(out, "\"service\":\"siteops\"") {
 		t.Fatalf("expected JSON service field, got: %s", out)
 	}
 }
@@ -50,7 +50,7 @@ func TestNewWithEnv_InvalidValuesWarnAndFallback(t *testing.T) {
 		"LOG_FORMAT": "yaml",
 		"LOG_SOURCE": "sometimes",
 	})
-	logger := newWithEnv("website-stitcher", env, &buf)
+	logger := newWithEnv("siteops", env, &buf)
 	logger.Info("after-invalid")
 
 	out := buf.String()

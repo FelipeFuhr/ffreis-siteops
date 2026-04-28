@@ -1,4 +1,4 @@
-name: Stitcher Container/FS Vulnerability Scan (Trivy)
+name: Siteops Container/FS Vulnerability Scan (Trivy)
 
 on:
   pull_request:

@@ -212,8 +212,8 @@ func runCompiler(ctx context.Context, logger *slog.Logger, cfg config.Config, ar
 		"out_dir", cfg.OutDir,
 	)
 
-	commandTimeout := getEnvDuration("STITCHER_COMMAND_TIMEOUT", 15*time.Minute)
-	shutdownGrace := getEnvDuration("STITCHER_SHUTDOWN_GRACE", 10*time.Second)
+	commandTimeout := getEnvDuration("SITEOPS_COMMAND_TIMEOUT", 15*time.Minute)
+	shutdownGrace := getEnvDuration("SITEOPS_SHUTDOWN_GRACE", 10*time.Second)
 	env := os.Environ()
 	if cfg.ContainerCommand != "" {
 		env = append(env, "CONTAINER_COMMAND="+cfg.ContainerCommand)
@@ -261,8 +261,8 @@ func runComposeWithEnv(ctx context.Context, logger *slog.Logger, cfg config.Conf
 		"compose_env_keys", strings.Join(sortedMapKeys(cfg.ComposeEnv), ","),
 	)
 
-	commandTimeout := getEnvDuration("STITCHER_COMMAND_TIMEOUT", 15*time.Minute)
-	shutdownGrace := getEnvDuration("STITCHER_SHUTDOWN_GRACE", 10*time.Second)
+	commandTimeout := getEnvDuration("SITEOPS_COMMAND_TIMEOUT", 15*time.Minute)
+	shutdownGrace := getEnvDuration("SITEOPS_SHUTDOWN_GRACE", 10*time.Second)
 	env := os.Environ()
 	if cfg.ContainerCommand != "" {
 		env = append(env, "CONTAINER_COMMAND="+cfg.ContainerCommand)
@@ -342,10 +342,10 @@ func withImageModelDefaults(env []string) []string {
 		env = append(env, "COMPILER_IMAGE_NAME="+compilerImageName)
 	}
 
-	stitcherImageName := strings.TrimSpace(current["STITCHER_IMAGE_NAME"])
-	if stitcherImageName == "" {
-		stitcherImageName = "website-compiler-watch"
-		env = append(env, "STITCHER_IMAGE_NAME="+stitcherImageName)
+	compilerWatchImageName := strings.TrimSpace(current["COMPILER_WATCH_IMAGE_NAME"])
+	if compilerWatchImageName == "" {
+		compilerWatchImageName = "website-compiler-watch"
+		env = append(env, "COMPILER_WATCH_IMAGE_NAME="+compilerWatchImageName)
 	}
 
 	imageProvider := strings.TrimSpace(current["IMAGE_PROVIDER"])
@@ -371,12 +371,12 @@ func withImageModelDefaults(env []string) []string {
 		env = append(env, "WEBSITE_COMPILER_IMAGE="+imageRoot+"/"+compilerImageName+":"+imageTag)
 	}
 
-	if strings.TrimSpace(current["STITCHER_IMAGE"]) == "" {
-		env = append(env, "STITCHER_IMAGE="+imageRoot+"/"+stitcherImageName+":"+imageTag)
+	if strings.TrimSpace(current["COMPILER_WATCH_IMAGE"]) == "" {
+		env = append(env, "COMPILER_WATCH_IMAGE="+imageRoot+"/"+compilerWatchImageName+":"+imageTag)
 	}
 
-	if strings.TrimSpace(current["STITCHER_RUNTIME_IMAGE"]) == "" {
-		env = append(env, "STITCHER_RUNTIME_IMAGE=debian:bookworm-slim")
+	if strings.TrimSpace(current["COMPILER_WATCH_RUNTIME_IMAGE"]) == "" {
+		env = append(env, "COMPILER_WATCH_RUNTIME_IMAGE=debian:bookworm-slim")
 	}
 
 	if strings.TrimSpace(current["PREVIEW_IMAGE"]) == "" {
@@ -504,8 +504,8 @@ func runListBuilds(ctx context.Context, logger *slog.Logger, cfg config.Config) 
 }
 
 func runAWS(ctx context.Context, logger *slog.Logger, cfg config.Config, args ...string) error {
-	commandTimeout := getEnvDuration("STITCHER_COMMAND_TIMEOUT", 15*time.Minute)
-	shutdownGrace := getEnvDuration("STITCHER_SHUTDOWN_GRACE", 10*time.Second)
+	commandTimeout := getEnvDuration("SITEOPS_COMMAND_TIMEOUT", 15*time.Minute)
+	shutdownGrace := getEnvDuration("SITEOPS_SHUTDOWN_GRACE", 10*time.Second)
 	logger.Debug("running aws command", "args", strings.Join(args, " "))
 	return runner.Run(ctx, logger, runner.Command{
 		Name:   "aws",

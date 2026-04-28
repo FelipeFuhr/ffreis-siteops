@@ -1,6 +1,6 @@
 # siteops (ffreis-siteops)
 
-Generic Go stitcher that orchestrates website builds through a configurable compiler CLI.
+Go CLI that orchestrates website builds through a configurable compiler CLI.
 
 It uses YAML config and is designed so project-specific data can stay local and ignored.
 
@@ -28,13 +28,13 @@ compose_env:
   WORKSPACE_ROOT: "."
   WEBSITE_ROOT: "my-website"
   OUT_DIR: "dist/my-website"
-  STITCHER_WATCH_PATH: "."
+  COMPILER_WATCH_PATH: "."
   PREFIX: "myorg"
   IMAGE_PROVIDER: ""
   IMAGE_TAG: "local"
   COMPILER_IMAGE_NAME: "website-compiler-cli"
-  STITCHER_IMAGE_NAME: "website-compiler-watch"
-  STITCHER_IMAGE: "myorg/website-compiler-watch:local"
+  COMPILER_WATCH_IMAGE_NAME: "website-compiler-watch"
+  COMPILER_WATCH_IMAGE: "myorg/website-compiler-watch:local"
   WEBSITE_COMPILER_IMAGE: "myorg/website-compiler-cli:local"
 ```
 
@@ -52,8 +52,7 @@ make publish
 ```
 
 CLI:
-- `siteops` is the preferred command.
-- `website-stitcher` remains as a backward-compatible alias.
+- `siteops` is the command.
 
 Specify another config:
 
@@ -63,14 +62,14 @@ make build CONFIG=config/another-site.local.yaml
 
 ## Logging
 
-Stitcher uses structured logging via Go `slog`.
+Siteops uses structured logging via Go `slog`.
 
 Environment variables:
 - `LOG_LEVEL`: `debug|info|warn|error` (default: `info`)
 - `LOG_FORMAT`: `text|json` (default: `text`)
 - `LOG_SOURCE`: `true|false` (default: `false`)
-- `STITCHER_COMMAND_TIMEOUT`: duration timeout per compiler/compose command (default: `15m`, `0` disables timeout)
-- `STITCHER_SHUTDOWN_GRACE`: grace period before force kill on cancel/timeout (default: `10s`)
+- `SITEOPS_COMMAND_TIMEOUT`: duration timeout per compiler/compose command (default: `15m`, `0` disables timeout)
+- `SITEOPS_SHUTDOWN_GRACE`: grace period before force kill on cancel/timeout (default: `10s`)
 
 Examples:
 
@@ -90,7 +89,7 @@ LOG_LEVEL=info LOG_FORMAT=json make compose-up
   - `publisher` runs `platform/ffreis-website-packer` to sync `out_dir` to the configured S3 bucket (bucket-per-domain recommended).
   - `invalidator` optionally runs CloudFront invalidation when `cloudfront_distribution_id` is set.
 - `site_data_source` optionally overrides `src/data/site.yaml`. When both are present, the override wins and the compiler logs a warning.
-- Every website must keep its own `src/data/site.contract.yaml` committed locally. The contract is authoritative for that site and is not overrideable through stitcher config.
+- Every website must keep its own `src/data/site.contract.yaml` committed locally. The contract is authoritative for that site and is not overrideable through siteops config.
 - `validate-site-data` lets you validate a local or external site-data payload against the site contract without doing a full build. This is useful for a separate repo that only manages updateable data.
 - `validate-assets` lets you validate that local `.css` and `.js` files are actually reachable from the rendered pages through HTML references, CSS `@import`, and JS module imports.
 - Contract usage validation follows `.SiteData` access through the compiler's generic `dig` helper, so websites should read site data with `dig` instead of direct `index` lookups when they want stale-contract detection.
@@ -101,12 +100,12 @@ LOG_LEVEL=info LOG_FORMAT=json make compose-up
   - `IMAGE_PROVIDER`
   - `IMAGE_TAG`
   - `COMPILER_IMAGE_NAME`
-  - `STITCHER_IMAGE_NAME`
+  - `COMPILER_WATCH_IMAGE_NAME`
   - Derived `IMAGE_ROOT = (IMAGE_PROVIDER ? IMAGE_PROVIDER + "/" : "") + PREFIX`
-- Compiler image for the stitcher watch build is resolved as:
+- Compiler image for the compiler-watch build is resolved as:
   - `${WEBSITE_COMPILER_IMAGE}` if set
   - otherwise `${IMAGE_ROOT}/website-compiler-cli:${IMAGE_TAG}`
 - `docker-compose.yml` uses:
-  - `${STITCHER_IMAGE}` if set
+  - `${COMPILER_WATCH_IMAGE}` if set
   - otherwise `${IMAGE_ROOT}/website-compiler-watch:${IMAGE_TAG}`
   - `${PREVIEW_IMAGE}` (default `nginx:alpine`)

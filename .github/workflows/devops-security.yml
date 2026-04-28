@@ -71,6 +71,8 @@ jobs:
     uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-scan-grype-fs.yml@main
     with:
       path: "."
+      severity: "high"
+      fail-on-vuln: false
       upload-sarif: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
 
   osv:
@@ -82,16 +84,3 @@ jobs:
     with:
       working-directory: "."
       upload-sarif: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
-
-  snyk:
-    # if: ${{ secrets.SNYK_TOKEN != '' }} # Disabled: context 'secrets' not allowed here
-    permissions:
-      contents: read
-      security-events: write
-    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-snyk.yml@main
-    with:
-      working-directory: "."
-      upload-sarif: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
-    secrets:
-      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-

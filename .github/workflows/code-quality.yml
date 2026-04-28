@@ -1,4 +1,4 @@
-name: Stitcher Code Quality (Sonar)
+name: Siteops Code Quality (Sonar)
 
 on:
   pull_request:
@@ -43,5 +43,5 @@ jobs:
         with:
           projectBaseDir: .
           args: >
-            -Dsonar.projectKey=ffreis-website-stitcher
+            -Dsonar.projectKey=ffreis-siteops
             -Dsonar.go.coverage.reportPaths=coverage.out
