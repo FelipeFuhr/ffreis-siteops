@@ -64,6 +64,58 @@ func TestNewWithEnv_InvalidValuesWarnAndFallback(t *testing.T) {
 	}
 }
 
+func TestNewWithEnv_WarnLevel(t *testing.T) {
+	var buf bytes.Buffer
+	env := mapEnv(map[string]string{"LOG_LEVEL": "warn"})
+	logger := newWithEnv("siteops", env, &buf)
+	logger.Info("info-hidden")
+	logger.Warn("warn-visible")
+	out := buf.String()
+	if strings.Contains(out, "info-hidden") {
+		t.Error("info should be hidden at warn level")
+	}
+	if !strings.Contains(out, "warn-visible") {
+		t.Error("warn should be visible at warn level")
+	}
+}
+
+func TestNewWithEnv_ErrorLevel(t *testing.T) {
+	var buf bytes.Buffer
+	env := mapEnv(map[string]string{"LOG_LEVEL": "error"})
+	logger := newWithEnv("siteops", env, &buf)
+	logger.Warn("warn-hidden")
+	logger.Error("error-visible")
+	out := buf.String()
+	if strings.Contains(out, "warn-hidden") {
+		t.Error("warn should be hidden at error level")
+	}
+	if !strings.Contains(out, "error-visible") {
+		t.Error("error should be visible at error level")
+	}
+}
+
+func TestNewWithEnv_SourceEnabled(t *testing.T) {
+	var buf bytes.Buffer
+	env := mapEnv(map[string]string{"LOG_SOURCE": "true"})
+	logger := newWithEnv("siteops", env, &buf)
+	logger.Info("with-source")
+	if !strings.Contains(buf.String(), "with-source") {
+		t.Error("expected log output with source enabled")
+	}
+}
+
+func TestNewWithEnv_WarningLevel(t *testing.T) {
+	var buf bytes.Buffer
+	env := mapEnv(map[string]string{"LOG_LEVEL": "warning"})
+	logger := newWithEnv("siteops", env, &buf)
+	logger.Info("info-hidden")
+	logger.Warn("warn-visible")
+	out := buf.String()
+	if strings.Contains(out, "info-hidden") {
+		t.Error("info should be hidden at warning level")
+	}
+}
+
 func emptyEnv(string) string {
 	return ""
 }

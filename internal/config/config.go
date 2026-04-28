@@ -125,7 +125,7 @@ type inventoryYAML struct {
 	} `yaml:"publish"`
 }
 
-// LoadFromInventory parses a websites-inventory YAML file (e.g. flemming.yaml)
+// LoadFromInventory parses a websites-inventory YAML file
 // and returns a Config suitable for the builds-related commands (upload-build,
 // promote, list-builds). Fields that require local paths (compiler_command,
 // website_root, out_dir) are not set — those commands do not need them.
