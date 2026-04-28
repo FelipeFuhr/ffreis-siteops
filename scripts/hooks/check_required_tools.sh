@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -eq 0 ]; then
+if [[ "$#" -eq 0 ]]; then
   echo "Usage: $0 <tool> [tool...]" >&2
   exit 1
 fi
@@ -9,7 +9,8 @@ fi
 missing=0
 
 install_hint() {
-  case "$1" in
+  local tool="$1"
+  case "$tool" in
     golangci-lint)
       echo "go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"
       ;;
@@ -26,9 +27,10 @@ install_hint() {
       echo "Install Go from https://go.dev/dl/"
       ;;
     *)
-      echo "Install '$1' and ensure it is available in PATH."
+      echo "Install '$tool' and ensure it is available in PATH."
       ;;
   esac
+  return 0
 }
 
 for tool in "$@"; do

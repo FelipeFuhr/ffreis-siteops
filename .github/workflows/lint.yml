@@ -12,17 +12,10 @@ on:
       - '.github/workflows/**'
 
 jobs:
-  golangci:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.25.8'
-          cache: true
-      - uses: golangci/golangci-lint-action@2f856675483cb8b9378ee77ee0beb67955aca9d7 # v6
-        with:
-          version: latest
-          install-mode: goinstall
-          skip-cache: true
-          working-directory: .
+  lint:
+    permissions:
+      contents: read
+    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-lint.yml@main
+    with:
+      go-version: "1.25.8"
+      working-directory: "."

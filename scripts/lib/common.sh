@@ -19,6 +19,7 @@ common_info() {
 common_die() {
   common_err "$@"
   exit 1
+  return 1
 }
 
 common_require_git_repo() {
@@ -37,16 +38,12 @@ common_is_allowlisted_path() {
     testdata/*|*/testdata/*|examples/*|*/examples/*)
       return 0
       ;;
-    *) ;;
-  esac
-  return 1
   esac
 
   case "$ext" in
     png|jpg|jpeg|svg|webp|ico|woff|woff2|ttf)
       return 0
       ;;
-    *) ;;
   esac
 
   return 1

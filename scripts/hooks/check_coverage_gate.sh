@@ -12,7 +12,7 @@ trap 'rm -f "${profile_file}"' EXIT
 go test ./... -coverprofile="${profile_file}"
 
 total_line="$(go tool cover -func="${profile_file}" | awk '/^total:/ {print $0}')"
-if [ -z "${total_line}" ]; then
+if [[ -z "${total_line}" ]]; then
   echo "Unable to determine total coverage from ${profile_file}." >&2
   exit 1
 fi

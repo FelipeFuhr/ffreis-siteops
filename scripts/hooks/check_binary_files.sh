@@ -10,6 +10,7 @@ common_require_git_repo
 is_allowlisted() {
   local path="$1"
   common_is_allowlisted_path "$path"
+  return $?
 }
 
 while IFS= read -r -d '' entry; do

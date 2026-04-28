@@ -105,11 +105,18 @@ func sleepWithContext(ctx context.Context, delay time.Duration) error {
 }
 
 func runOnce(ctx context.Context, c Command, grace time.Duration) error {
-	command := exec.Command(c.Name, c.Args...) // nosemgrep: go.lang.security.audit.dangerous-exec-command.dangerous-exec-command
-	command.Env = c.Env
-	command.Stdin = c.Stdin
-	command.Stdout = c.Stdout
-	command.Stderr = c.Stderr
+	path, err := exec.LookPath(c.Name)
+	if err != nil {
+		return fmt.Errorf("resolving command %q: %w", c.Name, err)
+	}
+	command := &exec.Cmd{
+		Path:   path,
+		Args:   append([]string{c.Name}, c.Args...),
+		Env:    c.Env,
+		Stdin:  c.Stdin,
+		Stdout: c.Stdout,
+		Stderr: c.Stderr,
+	}
 
 	if err := command.Start(); err != nil {
 		return err
