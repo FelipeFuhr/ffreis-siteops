@@ -91,7 +91,7 @@ func TestRun_NonRetryableNotFound(t *testing.T) {
 }
 
 func TestNormalizeOptions_Defaults(t *testing.T) {
-	opts := normalizeOptions(Options{})
+	opts := NormalizeOptions(Options{})
 	if opts.MaxAttempts != 1 {
 		t.Errorf("MaxAttempts: got %d, want 1", opts.MaxAttempts)
 	}
@@ -107,7 +107,7 @@ func TestNormalizeOptions_Defaults(t *testing.T) {
 }
 
 func TestNormalizeOptions_PreservesExisting(t *testing.T) {
-	opts := normalizeOptions(Options{
+	opts := NormalizeOptions(Options{
 		MaxAttempts:   5,
 		ShutdownGrace: 30 * time.Second,
 		BaseDelay:     500 * time.Millisecond,
@@ -122,7 +122,7 @@ func TestNormalizeOptions_PreservesExisting(t *testing.T) {
 }
 
 func TestAttemptContext_NoTimeout(t *testing.T) {
-	ctx, cancel := attemptContext(context.Background(), 0)
+	ctx, cancel := AttemptContext(context.Background(), 0)
 	defer cancel()
 	if _, ok := ctx.Deadline(); ok {
 		t.Error("expected no deadline for zero timeout")
@@ -130,7 +130,7 @@ func TestAttemptContext_NoTimeout(t *testing.T) {
 }
 
 func TestAttemptContext_WithTimeout(t *testing.T) {
-	ctx, cancel := attemptContext(context.Background(), 100*time.Millisecond)
+	ctx, cancel := AttemptContext(context.Background(), 100*time.Millisecond)
 	defer cancel()
 	if _, ok := ctx.Deadline(); !ok {
 		t.Error("expected deadline for positive timeout")
@@ -138,26 +138,26 @@ func TestAttemptContext_WithTimeout(t *testing.T) {
 }
 
 func TestSleepWithContext_CompletesNormally(t *testing.T) {
-	err := sleepWithContext(context.Background(), 1*time.Millisecond)
+	err := SleepWithContext(context.Background(), 1*time.Millisecond)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
 
 func TestSleepWithContext_CancelDuringSleep(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		time.Sleep(10 * time.Millisecond)
-		cancel()
-	}()
-	err := sleepWithContext(ctx, 10*time.Second)
+       ctx, cancel := context.WithCancel(context.Background())
+       go func() {
+	       time.Sleep(10 * time.Millisecond)
+	       cancel()
+       }()
+       err := SleepWithContext(ctx, 10*time.Second)
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("expected Canceled, got %v", err)
 	}
 }
 
 func TestBackoff_CapsAtMax(t *testing.T) {
-	got := backoff(10, 100*time.Millisecond, 1*time.Second)
+	got := Backoff(10, 100*time.Millisecond, 1*time.Second)
 	if got != 1*time.Second {
 		t.Errorf("got %v, want 1s (capped)", got)
 	}
@@ -165,49 +165,49 @@ func TestBackoff_CapsAtMax(t *testing.T) {
 
 func TestBackoff_Doubles(t *testing.T) {
 	base := 100 * time.Millisecond
-	attempt1 := backoff(1, base, 10*time.Second)
-	attempt2 := backoff(2, base, 10*time.Second)
+	attempt1 := Backoff(1, base, 10*time.Second)
+	attempt2 := Backoff(2, base, 10*time.Second)
 	if attempt2 != 2*attempt1 {
 		t.Errorf("expected doubling: attempt1=%v attempt2=%v", attempt1, attempt2)
 	}
 }
 
 func TestIsRetryable_NilError(t *testing.T) {
-	if isRetryable(nil) {
-		t.Error("nil error should not be retryable")
-	}
+       if IsRetryable(nil) {
+	       t.Error("nil error should not be retryable")
+       }
 }
 
 func TestIsRetryable_ContextErrors(t *testing.T) {
-	if isRetryable(context.Canceled) {
-		t.Error("context.Canceled should not be retryable")
-	}
-	if isRetryable(context.DeadlineExceeded) {
-		t.Error("context.DeadlineExceeded should not be retryable")
-	}
+       if IsRetryable(context.Canceled) {
+	       t.Error("context.Canceled should not be retryable")
+       }
+       if IsRetryable(context.DeadlineExceeded) {
+	       t.Error("context.DeadlineExceeded should not be retryable")
+       }
 }
 
 func TestIsRetryable_ErrNotFound(t *testing.T) {
-	if isRetryable(exec.ErrNotFound) {
-		t.Error("ErrNotFound should not be retryable")
-	}
+       if IsRetryable(exec.ErrNotFound) {
+	       t.Error("ErrNotFound should not be retryable")
+       }
 }
 
 func TestIsRetryable_TransientStrings(t *testing.T) {
-	cases := []struct {
-		msg  string
-		want bool
-	}{
-		{"resource temporarily unavailable", true},
-		{"connection reset by peer", true},
-		{"TEMPORARILY UNAVAILABLE", true},
-		{"CONNECTION RESET", true},
-		{"some other error", false},
-	}
-	for _, tc := range cases {
-		got := isRetryable(errors.New(tc.msg))
-		if got != tc.want {
-			t.Errorf("isRetryable(%q) = %v, want %v", tc.msg, got, tc.want)
-		}
-	}
+       cases := []struct {
+	       msg  string
+	       want bool
+       }{
+	       {"resource temporarily unavailable", true},
+	       {"connection reset by peer", true},
+	       {"TEMPORARILY UNAVAILABLE", true},
+	       {"CONNECTION RESET", true},
+	       {"some other error", false},
+       }
+       for _, tc := range cases {
+	       got := IsRetryable(errors.New(tc.msg))
+	       if got != tc.want {
+		       t.Errorf("IsRetryable(%q) = %v, want %v", tc.msg, got, tc.want)
+	       }
+       }
 }

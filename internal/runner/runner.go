@@ -30,33 +30,33 @@ type Options struct {
 }
 
 var Run = func(ctx context.Context, logger *slog.Logger, cmd Command, opts Options) error {
-	opts = normalizeOptions(opts)
+       opts = NormalizeOptions(opts)
 
-	var lastErr error
-	for attempt := 1; attempt <= opts.MaxAttempts; attempt++ {
-		attemptCtx, cancel := attemptContext(ctx, opts.Timeout)
-		err := runOnce(attemptCtx, cmd, opts.ShutdownGrace)
-		cancel()
-		if err == nil {
-			return nil
-		}
+       var lastErr error
+       for attempt := 1; attempt <= opts.MaxAttempts; attempt++ {
+	       attemptCtx, cancel := AttemptContext(ctx, opts.Timeout)
+	       err := RunOnce(attemptCtx, cmd, opts.ShutdownGrace)
+	       cancel()
+	       if err == nil {
+		       return nil
+	       }
 
-		lastErr = err
-		if stop, stopErr := shouldStopRetry(ctx, err, attempt, opts.MaxAttempts); stop {
-			if stopErr != nil {
-				return stopErr
-			}
-			return err
-		}
+	       lastErr = err
+	       if stop, stopErr := ShouldStopRetry(ctx, err, attempt, opts.MaxAttempts); stop {
+		       if stopErr != nil {
+			       return stopErr
+		       }
+		       return err
+	       }
 
-		delay := backoff(attempt, opts.BaseDelay, opts.MaxDelay)
-		logger.Warn("command failed; retrying", "command", cmd.Name, "attempt", attempt, "max_attempts", opts.MaxAttempts, "delay", delay.String(), "error", err)
+	       delay := Backoff(attempt, opts.BaseDelay, opts.MaxDelay)
+	       logger.Warn("command failed; retrying", "command", cmd.Name, "attempt", attempt, "max_attempts", opts.MaxAttempts, "delay", delay.String(), "error", err)
 
-		if err := sleepWithContext(ctx, delay); err != nil {
-			return err
-		}
-	}
-	return lastErr
+	       if err := SleepWithContext(ctx, delay); err != nil {
+		       return err
+	       }
+       }
+       return lastErr
 }
 
 var NormalizeOptions = func(opts Options) Options {
@@ -107,6 +107,8 @@ var SleepWithContext = func(ctx context.Context, delay time.Duration) error {
 // SECURITY: Command.Name and Command.Args must not contain untrusted user input.
 // These values should be set only from trusted sources or validated before use.
 // If user input is allowed, sanitize or restrict allowed commands.
+var AllowedCommands = []string{"echo", "aws", "docker-compose", "siteops-compiler", "website-compiler-cli"}
+
 var RunOnce = func(ctx context.Context, c Command, grace time.Duration) error {
 	// Basic validation: prevent empty or obviously dangerous command names
 	if strings.TrimSpace(c.Name) == "" {
@@ -114,6 +116,16 @@ var RunOnce = func(ctx context.Context, c Command, grace time.Duration) error {
 	}
 	if strings.ContainsAny(c.Name, ";&|$") {
 		return fmt.Errorf("command name contains potentially dangerous characters: %q", c.Name)
+	}
+	allowed := false
+	for _, cmd := range AllowedCommands {
+		if c.Name == cmd {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
+		return fmt.Errorf("command %q is not in the allowed whitelist", c.Name)
 	}
 	path, err := exec.LookPath(c.Name)
 	if err != nil {
