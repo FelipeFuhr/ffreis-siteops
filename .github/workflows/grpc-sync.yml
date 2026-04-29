@@ -8,7 +8,7 @@ on:
 
 jobs:
   grpc-sync:
-    uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-run-commands.yml@main
+    uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-run-commands.yml@fc5fcac8c2cfe0ccd8d18b73383df445ec31e371
     with:
       working-directory: "."
       skip-if-glob-empty: |-
