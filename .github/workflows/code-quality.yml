@@ -15,7 +15,7 @@ jobs:
   sonar:
     permissions:
       contents: read
-    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-sonar.yml@main
+    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-sonar.yml@b253b2329a11552b6276781c56f6dc6fd1718710
     with:
       go-version: "1.25.8"
       working-directory: "."

@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - id: scan
-        uses: anchore/scan-action@v5
+        uses: anchore/scan-action@b7e6e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2
         with:
           path: ./
           output-format: sarif
