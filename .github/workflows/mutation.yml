@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   mutation:
-    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-mutation.yml@main
+    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-mutation.yml@b253b2329a11552b6276781c56f6dc6fd1718710
     with:
       packages: "./internal/..."
       threshold: 60

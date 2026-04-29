@@ -133,6 +133,9 @@ var RunOnce = func(ctx context.Context, c Command, grace time.Duration) error {
 	if err != nil {
 		return fmt.Errorf("resolving command %q: %w", c.Name, err)
 	}
+
+	// nosemgrep: go.lang.security.audit.dangerous-exec-cmd.dangerous-exec-cmd
+	// safe: path and args are internally controlled, not user input
 	command := &exec.Cmd{
 		Path:   path,
 		Args:   append([]string{c.Name}, c.Args...),
