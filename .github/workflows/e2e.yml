@@ -61,7 +61,7 @@ jobs:
           EOF
           ./siteops -config /tmp/siteops-ci.yaml build-inline
           test -f /tmp/siteops-dist/index.html
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: siteops-built-site
           path: /tmp/siteops-dist
