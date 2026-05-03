@@ -5,10 +5,18 @@ on:
   schedule:
     - cron: '20 4 * * *'
 
+permissions:
+  contents: read
+
 jobs:
   require-secrets:
     runs-on: ubuntu-latest
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
+        with:
+          egress-policy: audit
+
       - name: Validate required secrets
         shell: bash
         env:
@@ -20,6 +28,11 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
+        with:
+          egress-policy: audit
+
       - name: Smoke checks
         # if: ${{ secrets.SITEOPS_SMOKE_BASE_URL != '' }} # Disabled: context 'secrets' not allowed here
         env:
