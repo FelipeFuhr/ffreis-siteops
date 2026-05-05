@@ -94,9 +94,16 @@ func TestPrintUsage_Covers(t *testing.T) {
 // ── loadConfig ─────────────────────────────────────────────────────────────
 
 func TestLoadConfig_BothFlagsError(t *testing.T) {
-	_, err := loadConfig("foo.yaml", "bar.yaml")
+	_, err := loadConfig("foo.yaml", "bar.yaml", "")
 	if err == nil || !strings.Contains(err.Error(), "cannot use both") {
 		t.Errorf("expected error for both flags, got %v", err)
+	}
+}
+
+func TestLoadConfig_DeploymentWithoutInventoryError(t *testing.T) {
+	_, err := loadConfig("config/site.local.yaml", "", "production")
+	if err == nil || !strings.Contains(err.Error(), "-deployment requires -inventory") {
+		t.Errorf("expected error for -deployment without -inventory, got %v", err)
 	}
 }
 
@@ -107,7 +114,7 @@ func TestLoadConfig_Inventory(t *testing.T) {
 	if err := os.WriteFile(invPath, content, 0644); err != nil {
 		t.Fatalf("failed to write inventory: %v", err)
 	}
-	cfg, err := loadConfig("config/site.local.yaml", invPath)
+	cfg, err := loadConfig("config/site.local.yaml", invPath, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -123,7 +130,7 @@ func TestLoadConfig_Config(t *testing.T) {
 	if err := os.WriteFile(cfgPath, content, 0644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
 	}
-	cfg, err := loadConfig(cfgPath, "")
+	cfg, err := loadConfig(cfgPath, "", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -133,7 +140,7 @@ func TestLoadConfig_Config(t *testing.T) {
 }
 
 func TestLoadConfig_ConfigError(t *testing.T) {
-	_, err := loadConfig("/nonexistent.yaml", "")
+	_, err := loadConfig("/nonexistent.yaml", "", "")
 	if err == nil {
 		t.Errorf("expected error from config.Load, got nil")
 	}

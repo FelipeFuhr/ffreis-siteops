@@ -33,6 +33,7 @@ func Run(appName string, args []string) int {
 	fs := flag.NewFlagSet(appName, flag.ContinueOnError)
 	cfgPath := fs.String("config", "config/site.local.yaml", "path to siteops yaml config")
 	inventoryPath := fs.String("inventory", "", "path to websites-inventory yaml (alternative to -config)")
+	deploymentName := fs.String("deployment", "", "deployment name from the inventory deployments map (requires -inventory)")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -43,7 +44,7 @@ func Run(appName string, args []string) int {
 		return 2
 	}
 
-	cfg, loadErr := loadConfig(*cfgPath, *inventoryPath)
+	cfg, loadErr := loadConfig(*cfgPath, *inventoryPath, *deploymentName)
 	if loadErr != nil {
 		logger.Error("failed to load config", "error", loadErr)
 		return 1
@@ -538,12 +539,15 @@ var runAWS = func(ctx context.Context, logger *slog.Logger, cfg config.Config, a
 	})
 }
 
-func loadConfig(cfgPath, inventoryPath string) (config.Config, error) {
+func loadConfig(cfgPath, inventoryPath, deploymentName string) (config.Config, error) {
 	if inventoryPath != "" && cfgPath != "config/site.local.yaml" {
 		return config.Config{}, fmt.Errorf("cannot use both -config and -inventory")
 	}
+	if deploymentName != "" && inventoryPath == "" {
+		return config.Config{}, fmt.Errorf("-deployment requires -inventory")
+	}
 	if inventoryPath != "" {
-		return config.LoadFromInventory(inventoryPath)
+		return config.LoadFromInventory(inventoryPath, deploymentName)
 	}
 	return config.Load(cfgPath)
 }
