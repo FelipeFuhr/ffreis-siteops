@@ -10,8 +10,7 @@ inventory repository:
 
 > `the fleet inventory` → `AGENTS.md`
 
-Architecture detail (CI/CD job graph, design decisions): `AGENTS.md` links to
-`docs/ARCHITECTURE.md` in the same repo.
+Architecture detail (CI/CD job graph, design decisions): `the fleet inventory` → `docs/ARCHITECTURE.md`.
 
 Do not look for cross-component flow documentation in this repo's README;
 it covers only siteops's own CLI commands and configuration.
