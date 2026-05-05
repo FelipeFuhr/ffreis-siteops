@@ -18,3 +18,4 @@ concurrency:
 jobs:
   semgrep:
     uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-semgrep.yml@main
+

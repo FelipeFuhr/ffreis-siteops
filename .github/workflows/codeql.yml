@@ -22,3 +22,4 @@ jobs:
     uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-codeql.yml@57c46cfaf3b815c97c58983ae2be73fb85573fb6
     with:
       languages: "go"
+
