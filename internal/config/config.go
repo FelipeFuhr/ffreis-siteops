@@ -110,6 +110,16 @@ func Load(path string) (Config, error) {
 	return cfg, nil
 }
 
+// inventoryDeploymentYAML holds per-deployment overrides within a websites-inventory file.
+type inventoryDeploymentYAML struct {
+	Publish struct {
+		Bucket                    string   `yaml:"bucket"`
+		Region                    string   `yaml:"region"`
+		Prefix                    string   `yaml:"prefix"`
+		CloudFrontInvalidatePaths []string `yaml:"cloudfront_invalidate_paths"`
+	} `yaml:"publish"`
+}
+
 // inventoryYAML is the parse target for a websites-inventory YAML file.
 // It is a different schema from the siteops local config file.
 type inventoryYAML struct {
@@ -121,15 +131,21 @@ type inventoryYAML struct {
 	Publish struct {
 		Bucket                    string   `yaml:"bucket"`
 		Region                    string   `yaml:"region"`
+		Prefix                    string   `yaml:"prefix"`
 		CloudFrontInvalidatePaths []string `yaml:"cloudfront_invalidate_paths"`
 	} `yaml:"publish"`
+	Deployments map[string]inventoryDeploymentYAML `yaml:"deployments"`
 }
 
-// LoadFromInventory parses a websites-inventory YAML file
-// and returns a Config suitable for the builds-related commands (upload-build,
-// promote, list-builds). Fields that require local paths (compiler_command,
-// website_root, out_dir) are not set — those commands do not need them.
-func LoadFromInventory(path string) (Config, error) {
+// LoadFromInventory parses a websites-inventory YAML file and returns a Config
+// suitable for the builds-related commands (upload-build, promote, list-builds).
+// Fields that require local paths (compiler_command, website_root, out_dir) are
+// not set — those commands do not need them.
+//
+// deploymentName selects a named entry from the deployments map. Pass an empty
+// string for inventories that have no deployments block (single-deployment, legacy).
+// When deployments are present, a non-empty deploymentName is required.
+func LoadFromInventory(path, deploymentName string) (Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return Config{}, fmt.Errorf("reading inventory file: %w", err)
@@ -143,9 +159,9 @@ func LoadFromInventory(path string) (Config, error) {
 		return Config{}, fmt.Errorf("inventory file must have a non-empty 'website' field")
 	}
 
-	paths := inv.Publish.CloudFrontInvalidatePaths
-	if len(paths) == 0 {
-		paths = []string{"/*"}
+	publishBucket, publishRegion, publishPrefix, cfPaths, buildsSource, err := resolveDeployment(inv, deploymentName)
+	if err != nil {
+		return Config{}, err
 	}
 
 	return Config{
@@ -153,16 +169,77 @@ func LoadFromInventory(path string) (Config, error) {
 		DefaultAddr: ":8080",
 		Builds: BuildsConfig{
 			Bucket: inv.Builds.Bucket,
-			Source: inv.Website,
+			Source: buildsSource,
 			Region: inv.Builds.Region,
 		},
 		Publish: PublishConfig{
-			Bucket:          inv.Publish.Bucket,
-			Prefix:          "/",
-			Region:          inv.Publish.Region,
-			CloudFrontPaths: paths,
+			Bucket:          publishBucket,
+			Prefix:          publishPrefix,
+			Region:          publishRegion,
+			CloudFrontPaths: cfPaths,
 		},
 	}, nil
+}
+
+func resolveDeployment(inv inventoryYAML, deploymentName string) (bucket, region, prefix string, cfPaths []string, buildsSource string, err error) {
+	if inv.Deployments != nil {
+		bucket, region, prefix, cfPaths, buildsSource, err = resolveNamedDeployment(inv, deploymentName)
+	} else {
+		bucket = inv.Publish.Bucket
+		region = inv.Publish.Region
+		prefix = inv.Publish.Prefix
+		cfPaths = inv.Publish.CloudFrontInvalidatePaths
+		buildsSource = inv.Website
+	}
+	if err != nil {
+		return
+	}
+	if len(cfPaths) == 0 {
+		cfPaths = []string{"/*"}
+	}
+	if strings.TrimSpace(prefix) == "" {
+		prefix = "/"
+	}
+	if region == "" {
+		region = inv.Builds.Region
+	}
+	return
+}
+
+func resolveNamedDeployment(inv inventoryYAML, deploymentName string) (bucket, region, prefix string, cfPaths []string, buildsSource string, err error) {
+	if strings.TrimSpace(deploymentName) == "" {
+		names := deploymentNames(inv.Deployments)
+		err = fmt.Errorf("inventory defines named deployments; -deployment flag is required (available: %v)", names)
+		return
+	}
+	dep, ok := inv.Deployments[deploymentName]
+	if !ok {
+		err = fmt.Errorf("deployment %q not found in inventory (available: %v)", deploymentName, deploymentNames(inv.Deployments))
+		return
+	}
+	bucket = dep.Publish.Bucket
+	if bucket == "" {
+		bucket = inv.Publish.Bucket
+	}
+	region = dep.Publish.Region
+	if region == "" {
+		region = inv.Publish.Region
+	}
+	prefix = dep.Publish.Prefix
+	cfPaths = dep.Publish.CloudFrontInvalidatePaths
+	if len(cfPaths) == 0 {
+		cfPaths = inv.Publish.CloudFrontInvalidatePaths
+	}
+	buildsSource = inv.Website + "/" + deploymentName
+	return
+}
+
+func deploymentNames(deps map[string]inventoryDeploymentYAML) []string {
+	names := make([]string, 0, len(deps))
+	for k := range deps {
+		names = append(names, k)
+	}
+	return names
 }
 
 func ValidateForCommand(cfg Config, command string) error {

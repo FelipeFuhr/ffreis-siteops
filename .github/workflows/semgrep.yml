@@ -1,42 +1,21 @@
-name: Siteops Semgrep Code Analysis
+name: Security - SAST (Semgrep)
 
 on:
   pull_request:
-    paths:
-      - '**'
-      - '.github/workflows/**'
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 8 * * 1"
 
 permissions:
-  security-events: write
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   semgrep:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
-        with:
-          egress-policy: audit
+    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-semgrep.yml@main
 
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-      - name: Install semgrep (pinned version)
-        run: pip install --only-binary ':all:' semgrep==1.67.0
-      - name: Download govulncheck dependencies
-        run: go mod tidy
-      - name: Install govulncheck (reproducible)
-        run: go install golang.org/x/vuln/cmd/govulncheck@"$(go list -m -f '{{.Version}}' golang.org/x/vuln)"
-      - name: Run semgrep
-        run: semgrep scan --config p/default --sarif --output semgrep.sarif .
-      - name: Validate SARIF output
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -s semgrep.sarif || (echo "semgrep.sarif was not generated or is empty" && exit 1)
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: siteops-semgrep-sarif
-          path: semgrep.sarif
-      - uses: github/codeql-action/upload-sarif@e46ed2cbd01164d986452f91f178727624ae40d7 # v4.35.3
-        with:
-          sarif_file: semgrep.sarif
