@@ -239,7 +239,7 @@ publish:
 		t.Fatal(err)
 	}
 
-	cfg, err := LoadFromInventory(path)
+	cfg, err := LoadFromInventory(path, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -280,7 +280,7 @@ func TestLoadFromInventory_DefaultCloudFrontPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cfg, err := LoadFromInventory(path)
+	cfg, err := LoadFromInventory(path, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -296,14 +296,14 @@ func TestLoadFromInventory_EmptyWebsite(t *testing.T) {
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	_, err := LoadFromInventory(path)
+	_, err := LoadFromInventory(path, "")
 	if err == nil {
 		t.Fatal("expected error for empty website field")
 	}
 }
 
 func TestLoadFromInventory_FileNotFound(t *testing.T) {
-	_, err := LoadFromInventory("/nonexistent/path/inventory.yaml")
+	_, err := LoadFromInventory("/nonexistent/path/inventory.yaml", "")
 	if err == nil {
 		t.Fatal("expected error for missing file")
 	}
@@ -315,9 +315,111 @@ func TestLoadFromInventory_InvalidYAML(t *testing.T) {
 	if err := os.WriteFile(path, []byte("website: [not: valid"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	_, err := LoadFromInventory(path)
+	_, err := LoadFromInventory(path, "")
 	if err == nil {
 		t.Fatal("expected error for invalid YAML")
+	}
+}
+
+func TestLoadFromInventory_NamedDeployment(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "inventory.yaml")
+	content := `
+website: my-site
+builds:
+  bucket: builds-bucket
+  region: us-east-1
+publish:
+  bucket: live-bucket
+  region: us-east-1
+  cloudfront_invalidate_paths: ["/*"]
+deployments:
+  production:
+    publish:
+      prefix: ""
+      cloudfront_invalidate_paths: ["/*"]
+  dev:
+    publish:
+      prefix: dev/
+      cloudfront_invalidate_paths: ["/dev/*"]
+`
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := LoadFromInventory(path, "dev")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Builds.Source != "my-site/dev" {
+		t.Errorf("Builds.Source: got %q, want %q", cfg.Builds.Source, "my-site/dev")
+	}
+	if cfg.Publish.Prefix != "dev/" {
+		t.Errorf("Publish.Prefix: got %q, want %q", cfg.Publish.Prefix, "dev/")
+	}
+	if len(cfg.Publish.CloudFrontPaths) != 1 || cfg.Publish.CloudFrontPaths[0] != "/dev/*" {
+		t.Errorf("CloudFrontPaths: got %v", cfg.Publish.CloudFrontPaths)
+	}
+}
+
+func TestLoadFromInventory_NamedDeploymentInheritsTopLevel(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "inventory.yaml")
+	content := `
+website: my-site
+builds:
+  bucket: builds-bucket
+  region: us-east-1
+publish:
+  bucket: live-bucket
+  region: us-east-2
+deployments:
+  staging:
+    publish:
+      prefix: staging/
+`
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := LoadFromInventory(path, "staging")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Publish.Bucket != "live-bucket" {
+		t.Errorf("Publish.Bucket: got %q, want inherited %q", cfg.Publish.Bucket, "live-bucket")
+	}
+	if cfg.Publish.Region != "us-east-2" {
+		t.Errorf("Publish.Region: got %q, want inherited %q", cfg.Publish.Region, "us-east-2")
+	}
+	if cfg.Publish.Prefix != "staging/" {
+		t.Errorf("Publish.Prefix: got %q, want %q", cfg.Publish.Prefix, "staging/")
+	}
+}
+
+func TestLoadFromInventory_MissingDeploymentFlag(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "inventory.yaml")
+	content := "website: my-site\nbuilds:\n  bucket: b\npublish:\n  bucket: p\ndeployments:\n  production:\n    publish:\n      prefix: \"\"\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := LoadFromInventory(path, "")
+	if err == nil {
+		t.Fatal("expected error when deployment flag is missing")
+	}
+}
+
+func TestLoadFromInventory_UnknownDeployment(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "inventory.yaml")
+	content := "website: my-site\nbuilds:\n  bucket: b\npublish:\n  bucket: p\ndeployments:\n  production:\n    publish:\n      prefix: \"\"\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := LoadFromInventory(path, "nonexistent")
+	if err == nil {
+		t.Fatal("expected error for unknown deployment name")
 	}
 }
 

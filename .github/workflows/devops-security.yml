@@ -20,7 +20,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-gitleaks.yml@fc5fcac8c2cfe0ccd8d18b73383df445ec31e371
+    uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-gitleaks.yml@01e2b12e992621fecf074b8a202f66044196f3bf
     with:
       working-directory: "."
       scan-history: true
@@ -32,7 +32,7 @@ jobs:
       actions: read
       contents: read
       security-events: write
-    uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-codeql.yml@a02d736d25fa99fca8b4b623af9467d7afc472a4
+    uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-codeql.yml@01e2b12e992621fecf074b8a202f66044196f3bf
     with:
       languages: "go"
       source-root: "."
@@ -40,7 +40,7 @@ jobs:
   govulncheck:
     permissions:
       contents: read
-    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-security.yml@b253b2329a11552b6276781c56f6dc6fd1718710
+    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-security.yml@706807616c7887b62bf1f5c72050db843add3828
     with:
       go-version: "1.25.8"
       working-directory: "."
@@ -49,7 +49,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-semgrep-sarif.yml@b253b2329a11552b6276781c56f6dc6fd1718710
+    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-semgrep-sarif.yml@706807616c7887b62bf1f5c72050db843add3828
     with:
       working-directory: "."
       upload-sarif: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
@@ -57,7 +57,8 @@ jobs:
   trivy-fs:
     permissions:
       contents: read
-    uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-scan-trivy-fs.yml@fc5fcac8c2cfe0ccd8d18b73383df445ec31e371
+      security-events: write
+    uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-scan-trivy-fs.yml@01e2b12e992621fecf074b8a202f66044196f3bf
     with:
       scan-ref: "."
       upload-sarif: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
@@ -65,7 +66,8 @@ jobs:
   grype-fs:
     permissions:
       contents: read
-    uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-scan-grype-fs.yml@fc5fcac8c2cfe0ccd8d18b73383df445ec31e371
+      security-events: write
+    uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-scan-grype-fs.yml@01e2b12e992621fecf074b8a202f66044196f3bf
     with:
       path: "."
       severity: "high"
@@ -75,7 +77,8 @@ jobs:
   osv:
     permissions:
       contents: read
-    uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-osv-scanner.yml@fc5fcac8c2cfe0ccd8d18b73383df445ec31e371
+      security-events: write
+    uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-osv-scanner.yml@01e2b12e992621fecf074b8a202f66044196f3bf
     with:
       working-directory: "."
       upload-sarif: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
