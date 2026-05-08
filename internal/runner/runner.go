@@ -108,7 +108,7 @@ var SleepWithContext = func(ctx context.Context, delay time.Duration) error {
 // SECURITY: Command.Name and Command.Args must not contain untrusted user input.
 // These values should be set only from trusted sources or validated before use.
 // If user input is allowed, sanitize or restrict allowed commands.
-var AllowedCommands = []string{"echo", "aws", "docker-compose", "siteops-compiler", "website-compiler-cli", "mock-website-compiler.sh", "bash"}
+var AllowedCommands = []string{"echo", "aws", "docker", "docker-compose", "git", "siteops-compiler", "website-compiler", "website-compiler-cli", "compose.sh", "mock-website-compiler.sh", "bash"}
 
 var RunOnce = func(ctx context.Context, c Command, grace time.Duration) error {
 	// Basic validation: prevent empty or obviously dangerous command names

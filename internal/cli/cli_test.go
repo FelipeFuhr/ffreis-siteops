@@ -273,10 +273,10 @@ func TestWithImageModelDefaults_AllEmpty(t *testing.T) {
 	if m["COMPILER_WATCH_IMAGE_NAME"] != "website-compiler-watch" {
 		t.Errorf("COMPILER_WATCH_IMAGE_NAME: got %q", m["COMPILER_WATCH_IMAGE_NAME"])
 	}
-	if m["COMPILER_WATCH_RUNTIME_IMAGE"] != "debian:bookworm-slim" {
+	if m["COMPILER_WATCH_RUNTIME_IMAGE"] != "docker.io/library/debian:bookworm-slim" {
 		t.Errorf("COMPILER_WATCH_RUNTIME_IMAGE: got %q", m["COMPILER_WATCH_RUNTIME_IMAGE"])
 	}
-	if m["PREVIEW_IMAGE"] != "nginx:alpine" {
+	if m["PREVIEW_IMAGE"] != "docker.io/library/nginx:alpine" {
 		t.Errorf("PREVIEW_IMAGE: got %q", m["PREVIEW_IMAGE"])
 	}
 }

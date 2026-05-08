@@ -20,7 +20,7 @@ LEFTHOOK_DIR ?= $(CURDIR)/.bin
 LEFTHOOK_BIN ?= $(LEFTHOOK_DIR)/lefthook
 
 .PHONY: mutation-test help info siteops-build deploy deploy-local \
-	build build-inline serve validate-site-data validate-assets clean \
+	build build-inline watch serve validate-site-data validate-assets clean \
 	compose-up compose-down compose-logs compose-rebuild publish \
 	docker-up docker-down docker-logs docker-rebuild \
 	fmt-check lint test test-race coverage-gate smoke-check secrets-scan-staged quality-gates hook-generated-drift \
@@ -62,7 +62,10 @@ deploy-local: ## Start local dev server — watch + rebuild on every change (req
 publish: ## Alias of deploy
 	$(SITEOPS) publish
 
-serve: ## Serve website using YAML config
+watch: ## Build, serve, and rebuild on file changes (no Docker needed)
+	$(SITEOPS) watch
+
+serve: ## Serve website using YAML config (one-shot build + serve, no watch)
 	$(SITEOPS) serve
 
 validate-site-data: ## Validate configured site data against the site contract

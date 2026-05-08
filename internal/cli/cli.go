@@ -73,6 +73,8 @@ func Run(appName string, args []string) int {
 			serveArgs = append(serveArgs, flagSiteData, cfg.SiteDataSource)
 		}
 		err = runCompiler(rootCtx, logger, cfg, append(serveArgs, extra...)...)
+	case "watch":
+		err = runWatch(rootCtx, logger, cfg)
 	case "validate-site-data":
 		validateArgs := []string{"validate-site-data", flagWebsiteRoot, cfg.WebsiteRoot}
 		if strings.TrimSpace(cfg.SiteDataSource) != "" {
@@ -394,11 +396,11 @@ func withImageModelDefaults(env []string) []string {
 	}
 
 	if strings.TrimSpace(current["COMPILER_WATCH_RUNTIME_IMAGE"]) == "" {
-		env = append(env, "COMPILER_WATCH_RUNTIME_IMAGE=debian:bookworm-slim")
+		env = append(env, "COMPILER_WATCH_RUNTIME_IMAGE=docker.io/library/debian:bookworm-slim")
 	}
 
 	if strings.TrimSpace(current["PREVIEW_IMAGE"]) == "" {
-		env = append(env, "PREVIEW_IMAGE=nginx:alpine")
+		env = append(env, "PREVIEW_IMAGE=docker.io/library/nginx:alpine")
 	}
 
 	return env
@@ -564,7 +566,8 @@ Commands:
   build              Build static website output
   build-inline       Build with inlined assets
   publish            alias of deploy
-  serve              Serve website locally
+  watch              Bootstrap compiler image if needed, then start docker-compose watch + preview
+  serve              Serve website locally (one-shot build + serve, no watch)
   validate-site-data Validate site data against the site contract
   validate-assets    Validate local CSS/JS assets against rendered pages
   clean              Remove output directory

@@ -12,6 +12,7 @@ import (
 type Config struct {
 	ProjectName          string            `yaml:"project_name"`
 	CompilerCommand      string            `yaml:"compiler_command"`
+	CompilerSrc          string            `yaml:"compiler_src"`
 	WebsiteRoot          string            `yaml:"website_root"`
 	OutDir               string            `yaml:"out_dir"`
 	SiteDataSource       string            `yaml:"site_data_source"`
@@ -84,6 +85,7 @@ func Load(path string) (Config, error) {
 
 	configDir := filepath.Dir(path)
 	cfg.CompilerCommand = resolvePath(configDir, cfg.CompilerCommand)
+	cfg.CompilerSrc = resolvePath(configDir, cfg.CompilerSrc)
 	cfg.WebsiteRoot = resolvePath(configDir, cfg.WebsiteRoot)
 	cfg.OutDir = resolvePath(configDir, cfg.OutDir)
 	cfg.SiteDataSource = resolvePath(configDir, cfg.SiteDataSource)
@@ -266,6 +268,8 @@ func requiredForCommand(command string) []commandRequirement {
 			requireNonEmpty("compiler_command", func(cfg Config) string { return cfg.CompilerCommand }),
 			requireNonEmpty("website_root", func(cfg Config) string { return cfg.WebsiteRoot }),
 		}
+	case "watch":
+		return []commandRequirement{requireComposeCommand()}
 	case "publish", "deploy":
 		return []commandRequirement{
 			requireNonEmpty("compiler_command", func(cfg Config) string { return cfg.CompilerCommand }),

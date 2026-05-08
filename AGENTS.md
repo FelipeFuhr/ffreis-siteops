@@ -8,12 +8,20 @@ For the complete system map — how this repo relates to the deployer, compiler,
 inventory, S3 infrastructure, and the other websites — see the private fleet
 inventory repository:
 
-> `the fleet inventory` → `AGENTS.md`
+> the fleet inventory (private repo — do not name it in commits or PR descriptions)
 
 Architecture detail (CI/CD job graph, design decisions): `the fleet inventory` → `docs/ARCHITECTURE.md`.
 
 Do not look for cross-component flow documentation in this repo's README;
 it covers only siteops's own CLI commands and configuration.
+
+## Public repo — private-repo hygiene
+
+This is a **public** GitHub repository. When writing commit messages, PR titles,
+PR descriptions, or any other user-visible text, **never name private repos** —
+website content, inventory, infra, Lambda, or data repos that are not publicly
+listed. Use generic terms instead: "the fleet inventory", "a private consumer",
+"internal infra", "private data repo", etc.
 
 ## Keeping this file current
 
