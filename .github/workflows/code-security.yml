@@ -15,5 +15,4 @@ concurrency:
 
 jobs:
   govulncheck:
-    timeout-minutes: 30
     uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-security.yml@083c0960905ce8381b4e8e6e28d082110bd47525

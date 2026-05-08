@@ -14,7 +14,6 @@ permissions:
 
 jobs:
   mutation:
-    timeout-minutes: 30
     uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-mutation.yml@706807616c7887b62bf1f5c72050db843add3828
     with:
       packages: "./internal/..."
