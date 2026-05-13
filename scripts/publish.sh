@@ -35,5 +35,5 @@ fi
 echo "Publishing website to s3://${bucket}${prefix}" >&2
 echo "Local dir: ${workdir}" >&2
 
-"/usr/local/go/bin/go" run ./platform/ffreis-website-packer/cmd/website-packer "${args[@]}"
+cd /workspace/platform/ffreis-website-packer && "/usr/local/go/bin/go" run ./cmd/website-packer "${args[@]}"
 
