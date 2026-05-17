@@ -23,6 +23,23 @@ website content, inventory, infra, Lambda, or data repos that are not publicly
 listed. Use generic terms instead: "the fleet inventory", "a private consumer",
 "internal infra", "private data repo", etc.
 
+## Local config optional embedding fields
+
+The following fields can be added to any `<site>.local.yaml` to control how the
+compiler embeds resources into HTML:
+
+| Field | Type | Description |
+|---|---|---|
+| `js_inline_threshold` | int | Override compiler's `-js-inline-threshold` (default 8192 = 8 KB). 0 = disable. |
+| `js_shared_inline_threshold` | int | Override compiler's `-js-shared-inline-threshold`. Scripts on >1 page use this lower limit instead; set to 0 to always cache shared scripts. nil = disabled (all JS uses `js_inline_threshold`). |
+| `raster_inline_threshold` | int | Override compiler's `-raster-inline-threshold` (default 0 = disabled). Use `2147483647` to embed all raster images. |
+| `embed_fonts` | bool | Pass `-embed-fonts` to embed font files as base64 data URIs in inlined CSS. |
+| `inline_body_css` | bool | Pass `-inline-body-css` to inline deferred body CSS instead of the deferred external pattern. |
+
+All four fields are optional; omitting them uses the compiler's built-in defaults.
+Flags are passed for both `build` and `build-inline` commands, but `-inline-assets`
+already handles all assets as data URIs so the threshold flags are redundant there.
+
 ## Keeping this file current
 
 - **If you discover a fact not reflected here:** add it before finishing your task.
