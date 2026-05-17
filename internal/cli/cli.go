@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -130,6 +131,21 @@ func buildArgs(cfg config.Config, inline bool) []string {
 	}
 	if cfg.MirrorExternalAssets {
 		args = append(args, "-mirror-external-assets")
+	}
+	if cfg.JSInlineThreshold != nil {
+		args = append(args, "-js-inline-threshold", strconv.Itoa(*cfg.JSInlineThreshold))
+	}
+	if cfg.JSSharedInlineThreshold != nil {
+		args = append(args, "-js-shared-inline-threshold", strconv.Itoa(*cfg.JSSharedInlineThreshold))
+	}
+	if cfg.RasterInlineThreshold != nil {
+		args = append(args, "-raster-inline-threshold", strconv.Itoa(*cfg.RasterInlineThreshold))
+	}
+	if cfg.EmbedFonts {
+		args = append(args, "-embed-fonts")
+	}
+	if cfg.InlineBodyCSS {
+		args = append(args, "-inline-body-css")
 	}
 	if inline {
 		args = append(args, "-inline-assets")

@@ -10,21 +10,40 @@ import (
 )
 
 type Config struct {
-	ProjectName          string            `yaml:"project_name"`
-	CompilerCommand      string            `yaml:"compiler_command"`
-	CompilerSrc          string            `yaml:"compiler_src"`
-	WebsiteRoot          string            `yaml:"website_root"`
-	OutDir               string            `yaml:"out_dir"`
-	SiteDataSource       string            `yaml:"site_data_source"`
-	SitemapBaseURL       string            `yaml:"sitemap_base_url"`
-	MirrorExternalAssets bool              `yaml:"mirror_external_assets"`
-	DefaultAddr          string            `yaml:"default_addr"`
-	ContainerCommand     string            `yaml:"container_command"`
-	ComposeCommand       []string          `yaml:"compose_command"`
-	ComposeFile          string            `yaml:"compose_file"`
-	ComposeEnv           map[string]string `yaml:"compose_env"`
-	Publish              PublishConfig     `yaml:"publish"`
-	Builds               BuildsConfig      `yaml:"builds"`
+	ProjectName          string `yaml:"project_name"`
+	CompilerCommand      string `yaml:"compiler_command"`
+	CompilerSrc          string `yaml:"compiler_src"`
+	WebsiteRoot          string `yaml:"website_root"`
+	OutDir               string `yaml:"out_dir"`
+	SiteDataSource       string `yaml:"site_data_source"`
+	SitemapBaseURL       string `yaml:"sitemap_base_url"`
+	MirrorExternalAssets bool   `yaml:"mirror_external_assets"`
+	// JSInlineThreshold overrides the compiler's -js-inline-threshold flag.
+	// nil = omit (compiler uses its own default of 8192). 0 = disable inlining.
+	JSInlineThreshold *int `yaml:"js_inline_threshold"`
+	// JSSharedInlineThreshold overrides the compiler's -js-shared-inline-threshold flag.
+	// When set, JS files referenced by more than one page use this limit instead of
+	// JSInlineThreshold. Set to 0 to never inline shared scripts (cache them all).
+	// nil = omit (compiler default = -1 = disabled, all JS uses JSInlineThreshold).
+	JSSharedInlineThreshold *int `yaml:"js_shared_inline_threshold"`
+	// RasterInlineThreshold overrides the compiler's -raster-inline-threshold flag.
+	// nil = omit (compiler default = 0 = disabled). Use a large value (e.g. 2147483647)
+	// to embed all raster images on the pages where they appear.
+	RasterInlineThreshold *int `yaml:"raster_inline_threshold"`
+	// EmbedFonts embeds font files (woff2/woff/ttf/otf/eot) as base64 data URIs in
+	// inlined CSS, eliminating font files from dist at the cost of larger HTML.
+	EmbedFonts bool `yaml:"embed_fonts"`
+	// InlineBodyCSS inlines body <link rel=stylesheet> as <style> blocks instead of
+	// the deferred external pattern, eliminating CSS files but preventing cross-page
+	// CSS cache reuse.
+	InlineBodyCSS    bool              `yaml:"inline_body_css"`
+	DefaultAddr      string            `yaml:"default_addr"`
+	ContainerCommand string            `yaml:"container_command"`
+	ComposeCommand   []string          `yaml:"compose_command"`
+	ComposeFile      string            `yaml:"compose_file"`
+	ComposeEnv       map[string]string `yaml:"compose_env"`
+	Publish          PublishConfig     `yaml:"publish"`
+	Builds           BuildsConfig      `yaml:"builds"`
 }
 
 // BuildsConfig holds settings for the build artifact staging bucket.
@@ -88,7 +107,7 @@ func Load(path string) (Config, error) {
 	cfg.CompilerSrc = resolvePath(configDir, cfg.CompilerSrc)
 	cfg.WebsiteRoot = resolvePath(configDir, cfg.WebsiteRoot)
 	cfg.OutDir = resolvePath(configDir, cfg.OutDir)
-	cfg.SiteDataSource = resolvePath(configDir, cfg.SiteDataSource)
+	cfg.SiteDataSource = resolveMultiPath(configDir, cfg.SiteDataSource)
 	if cfg.ComposeFile != "" {
 		cfg.ComposeFile = resolvePath(configDir, cfg.ComposeFile)
 	}
@@ -333,4 +352,17 @@ func resolvePath(baseDir, v string) string {
 		return v
 	}
 	return filepath.Clean(filepath.Join(baseDir, v))
+}
+
+// resolveMultiPath resolves each "|"-separated segment of v as a path relative to baseDir.
+func resolveMultiPath(baseDir, v string) string {
+	parts := strings.Split(v, "|")
+	if len(parts) == 1 {
+		return resolvePath(baseDir, v)
+	}
+	resolved := make([]string, 0, len(parts))
+	for _, p := range parts {
+		resolved = append(resolved, resolvePath(baseDir, strings.TrimSpace(p)))
+	}
+	return strings.Join(resolved, "|")
 }
