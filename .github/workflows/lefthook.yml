@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   lefthook:
-    uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-lefthook.yml@01e2b12e992621fecf074b8a202f66044196f3bf
+    uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-lefthook.yml@5dfbb4986ceb88f6518fa719da3a255294cf03cf
     with:
       working-directory: "."
       go-version: "1.25.8"
