@@ -15,4 +15,4 @@ concurrency:
 
 jobs:
   govulncheck:
-    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-security.yml@083c0960905ce8381b4e8e6e28d082110bd47525
+    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-security.yml@a543ef895b5c2d6e4e7fe87245d440889c485b7c
