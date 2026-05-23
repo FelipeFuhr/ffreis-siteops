@@ -19,7 +19,7 @@ MUTATION_THRESHOLD ?= 60
 LEFTHOOK_DIR ?= $(CURDIR)/.bin
 LEFTHOOK_BIN ?= $(LEFTHOOK_DIR)/lefthook
 
-.PHONY: mutation-test help info siteops-build deploy deploy-local \
+.PHONY: mutation-test help info siteops-build deploy deploy-local dev \
 	build build-inline watch serve validate-site-data validate-assets clean \
 	compose-up compose-down compose-logs compose-rebuild publish \
 	docker-up docker-down docker-logs docker-rebuild \
@@ -58,6 +58,9 @@ deploy: ## Build and publish to S3 + CloudFront (production)
 
 deploy-local: ## Start local dev server — watch + rebuild on every change (requires compiler Docker image)
 	$(SITEOPS) deploy-local
+
+dev: ## Run dev env locally with /ask|/api/* proxied to dev API Gateway (CONFIG=config/<site>-dev.local.yaml [LANG=pt])
+	$(SITEOPS) dev $(if $(LANG),--lang $(LANG))
 
 publish: ## Alias of deploy
 	$(SITEOPS) publish
@@ -112,7 +115,7 @@ lint: ## Run golangci-lint
 	$(GOLANGCI_LINT) run
 
 test: ## Run unit tests
-	go test ./...
+	go test -race -shuffle=on ./...
 
 test-race: ## Run tests with race detector
 	go test -race ./...

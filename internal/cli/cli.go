@@ -76,6 +76,8 @@ func Run(appName string, args []string) int {
 		err = runCompiler(rootCtx, logger, cfg, append(serveArgs, extra...)...)
 	case "watch":
 		err = runWatch(rootCtx, logger, cfg)
+	case "dev":
+		err = runDev(rootCtx, logger, cfg, extra)
 	case "validate-site-data":
 		validateArgs := []string{"validate-site-data", flagWebsiteRoot, cfg.WebsiteRoot}
 		if strings.TrimSpace(cfg.SiteDataSource) != "" {
@@ -584,6 +586,7 @@ Commands:
   publish            alias of deploy
   watch              Bootstrap compiler image if needed, then start docker-compose watch + preview
   serve              Serve website locally (one-shot build + serve, no watch)
+  dev                Run dev env locally: inject data + serve frontend + proxy /ask|/api/* to dev API Gateway
   validate-site-data Validate site data against the site contract
   validate-assets    Validate local CSS/JS assets against rendered pages
   clean              Remove output directory

@@ -44,6 +44,35 @@ type Config struct {
 	ComposeEnv       map[string]string `yaml:"compose_env"`
 	Publish          PublishConfig     `yaml:"publish"`
 	Builds           BuildsConfig      `yaml:"builds"`
+
+	// DataRoot is the root directory of the data repo, containing per-language
+	// subdirs (pt/, en/, jp/) plus shared/. Used by the dev command to inject
+	// the selected language's data into <website_root>/src/data/ before serving.
+	DataRoot string `yaml:"data_root"`
+	// DefaultLang selects which language under DataRoot to inject when the
+	// dev command is invoked without --lang. Example values: "pt", "en", "jp".
+	DefaultLang string `yaml:"default_lang"`
+	// PreviewPort is the user-facing port for the dev command. 0 = pick 8088
+	// (or first free port adjacent).
+	PreviewPort int `yaml:"preview_port"`
+	// API is the local-dev API passthrough config used by the dev command.
+	// When unset, dev mode serves the frontend only with no API proxying.
+	API APIConfig `yaml:"api"`
+}
+
+// APIConfig configures the dev command's API Gateway passthrough.
+// When GatewayURL is empty, no API routes are proxied (frontend-only mode).
+type APIConfig struct {
+	// GatewayURL is the dev API Gateway invoke URL (e.g.
+	// https://abc123.execute-api.us-east-1.amazonaws.com).
+	GatewayURL string `yaml:"gateway_url"`
+	// DevOrigin is the dev domain whose Origin header the dev Lambdas accept
+	// (e.g. https://flemming.ffreis.com). The proxy rewrites the incoming
+	// localhost Origin to this value so Lambda CORS checks pass.
+	DevOrigin string `yaml:"dev_origin"`
+	// ProxyPaths are request path patterns routed to the API Gateway instead
+	// of the local compiler. Trailing /* is supported (e.g. /api/*).
+	ProxyPaths []string `yaml:"proxy_paths"`
 }
 
 // BuildsConfig holds settings for the build artifact staging bucket.
@@ -108,6 +137,7 @@ func Load(path string) (Config, error) {
 	cfg.WebsiteRoot = resolvePath(configDir, cfg.WebsiteRoot)
 	cfg.OutDir = resolvePath(configDir, cfg.OutDir)
 	cfg.SiteDataSource = resolveMultiPath(configDir, cfg.SiteDataSource)
+	cfg.DataRoot = resolvePath(configDir, cfg.DataRoot)
 	if cfg.ComposeFile != "" {
 		cfg.ComposeFile = resolvePath(configDir, cfg.ComposeFile)
 	}
@@ -286,6 +316,12 @@ func requiredForCommand(command string) []commandRequirement {
 		return []commandRequirement{
 			requireNonEmpty("compiler_command", func(cfg Config) string { return cfg.CompilerCommand }),
 			requireNonEmpty("website_root", func(cfg Config) string { return cfg.WebsiteRoot }),
+		}
+	case "dev":
+		return []commandRequirement{
+			requireNonEmpty("compiler_command", func(cfg Config) string { return cfg.CompilerCommand }),
+			requireNonEmpty("website_root", func(cfg Config) string { return cfg.WebsiteRoot }),
+			requireNonEmpty("data_root", func(cfg Config) string { return cfg.DataRoot }),
 		}
 	case "watch":
 		return []commandRequirement{requireComposeCommand()}
