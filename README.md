@@ -49,7 +49,30 @@ make validate-site-data
 make validate-assets
 make compose-up
 make publish
+make dev CONFIG=config/flemming-dev.local.yaml LANG=pt
 ```
+
+### `dev` — run the develop env locally end-to-end
+
+`make dev CONFIG=<site>-dev.local.yaml [LANG=pt]` (or `siteops dev`) does in one
+command what previously took six manual steps:
+
+1. Stages site data: copies `<data_root>/<lang>/site.yaml` and merges
+   `<data_root>/<lang>/site.d/` + `<data_root>/shared/site.d/` into
+   `<website_root>/src/data/`.
+2. Spawns `website-compiler serve` on an internal port.
+3. Listens on `preview_port` (default 8088) and reverse-proxies:
+   - `/ask` and any `api.proxy_paths` patterns → `api.gateway_url` (the dev API
+     Gateway), with the request `Origin` rewritten to `api.dev_origin` so the
+     dev Lambda's `CORS_ALLOW_ORIGIN` check passes;
+   - everything else → the compiler.
+
+Use `AWS_PROFILE=ffreis-platform` if you need AWS CLI access alongside; the
+proxy itself only needs HTTPS reachability to the API Gateway, since the dev
+Lambdas hold their own dev Bedrock + KB bucket permissions server-side.
+
+When the `api` block is omitted, dev mode runs frontend-only with no API
+proxying — useful for content-only iteration.
 
 CLI:
 - `siteops` is the command.
