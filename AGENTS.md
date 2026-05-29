@@ -10,7 +10,7 @@ inventory repository:
 
 > the fleet inventory (private repo — do not name it in commits or PR descriptions)
 
-Architecture detail (CI/CD job graph, design decisions): `the fleet inventory` → `docs/ARCHITECTURE.md`.
+Architecture detail (CI/CD job graph, design decisions): `docs/ARCHITECTURE.md` in the fleet inventory repo.
 
 Do not look for cross-component flow documentation in this repo's README;
 it covers only siteops's own CLI commands and configuration.
@@ -39,7 +39,7 @@ Required config fields:
 | `default_lang` | Language injected when `--lang` is not passed (e.g. `pt`, `en`, `jp`). |
 | `preview_port` | Optional. User-facing port; default 8088. If taken, the next free port in [start, start+50) is used. |
 | `api.gateway_url` | Optional. Dev API Gateway invoke URL. When unset, dev mode is frontend-only. |
-| `api.dev_origin` | Origin value to inject on proxied API requests (e.g. `https://flemming.ffreis.com`). |
+| `api.dev_origin` | Origin value to inject on proxied API requests (e.g. `https://<dev-site-origin>`). |
 | `api.proxy_paths` | Path patterns routed to the API Gateway. Trailing `/*` is supported (e.g. `/api/*`). |
 
 Data injection mirrors the manual local-deploy procedure: per-language
@@ -50,8 +50,8 @@ top-level data dir, so we materialize the merge ahead of serving.
 Discovering API Gateway URLs:
 
 ```bash
-AWS_PROFILE=ffreis-platform aws apigatewayv2 get-apis --region us-east-1 \
-  --query 'Items[?contains(Name, `-api-dev`)].{Name:Name,Endpoint:ApiEndpoint}' --output table
+AWS_PROFILE=ffreis-platform aws apigatewayv2 get-apis \
+  --query 'Items[].{Name:Name,Endpoint:ApiEndpoint}' --output table
 ```
 
 The dev Lambdas already accept requests with `Origin: https://<dev-domain>`
