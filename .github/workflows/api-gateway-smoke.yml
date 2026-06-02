@@ -3,7 +3,7 @@ name: Siteops API Gateway Smoke
 on:
   workflow_dispatch:
   schedule:
-    - cron: '20 4 * * *'
+    - cron: '52 22 12 * *'  # monthly scattered (was: 20 4 * * *)
 
 jobs:
   require-secrets:
