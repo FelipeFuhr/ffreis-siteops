@@ -96,7 +96,11 @@ func TestDevProxy_FrontendRouteByDefault(t *testing.T) {
 	srv := httptest.NewServer(h)
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/some-page.html")
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+"/some-page.html", nil)
+	if err != nil {
+		t.Fatalf("building request: %v", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("GET frontend: %v", err)
 	}
@@ -136,7 +140,10 @@ func TestDevProxy_APIRouteForwardsAndRewritesOrigin(t *testing.T) {
 	srv := httptest.NewServer(h)
 	defer srv.Close()
 
-	req, _ := http.NewRequest(http.MethodPost, srv.URL+"/ask", strings.NewReader(`{"q":"hello"}`))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, srv.URL+"/ask", strings.NewReader(`{"q":"hello"}`))
+	if err != nil {
+		t.Fatalf("building request: %v", err)
+	}
 	req.Header.Set("Origin", "http://localhost:8088")
 	req.Header.Set("Content-Type", "application/json")
 
@@ -204,7 +211,12 @@ func TestDevProxy_APIWildcardMatchesChildren(t *testing.T) {
 		{"/index.html", "frontend"},
 	}
 	for _, tc := range cases {
-		resp, err := http.Get(srv.URL + tc.path)
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+tc.path, nil)
+		if err != nil {
+			t.Errorf("building request for %s: %v", tc.path, err)
+			continue
+		}
+		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			t.Errorf("GET %s: %v", tc.path, err)
 			continue
@@ -237,7 +249,11 @@ func TestDevProxy_NoACAORewriteWhenUpstreamOmitsIt(t *testing.T) {
 	srv := httptest.NewServer(h)
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/ask")
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+"/ask", nil)
+	if err != nil {
+		t.Fatalf("building request: %v", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("GET: %v", err)
 	}

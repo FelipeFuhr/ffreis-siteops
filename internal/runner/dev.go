@@ -38,11 +38,11 @@ func RunDev(ctx context.Context, logger *slog.Logger, spec DevSpec) error {
 		return fmt.Errorf("injecting data: %w", err)
 	}
 
-	userPort, err := allocatePort(spec.PreviewPort)
+	userPort, err := allocatePort(ctx, spec.PreviewPort)
 	if err != nil {
 		return fmt.Errorf("allocating user port: %w", err)
 	}
-	internalPort, err := allocatePort(userPort + 1)
+	internalPort, err := allocatePort(ctx, userPort+1)
 	if err != nil {
 		return fmt.Errorf("allocating internal port: %w", err)
 	}
@@ -238,12 +238,13 @@ func copyFile(src, dst string) error {
 
 // allocatePort tries `start`, then the next 49 ports, returning the first one
 // that binds. start <= 0 means "use 8088".
-func allocatePort(start int) (int, error) {
+func allocatePort(ctx context.Context, start int) (int, error) {
 	if start <= 0 {
 		start = 8088
 	}
+	var lc net.ListenConfig
 	for port := start; port < start+50; port++ {
-		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+		ln, err := lc.Listen(ctx, "tcp", fmt.Sprintf(":%d", port))
 		if err == nil {
 			_ = ln.Close()
 			return port, nil
@@ -255,11 +256,14 @@ func allocatePort(start int) (int, error) {
 func waitForPort(ctx context.Context, host string, port int, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	addr := net.JoinHostPort(host, fmt.Sprintf("%d", port))
+	var dialer net.Dialer
 	for {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		conn, err := net.DialTimeout("tcp", addr, 500*time.Millisecond)
+		dialCtx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+		conn, err := dialer.DialContext(dialCtx, "tcp", addr)
+		cancel()
 		if err == nil {
 			_ = conn.Close()
 			return nil

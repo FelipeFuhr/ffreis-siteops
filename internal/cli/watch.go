@@ -30,7 +30,7 @@ func runWatch(ctx context.Context, logger *slog.Logger, cfg config.Config) error
 
 	cfg = resolveWorkspaceRoot(cfg)
 
-	port := pickFreePort(previewStartPort(cfg))
+	port := pickFreePort(ctx, previewStartPort(cfg))
 	cfg = injectPort(cfg, port)
 	logger.Info("preview will serve", "addr", fmt.Sprintf("http://localhost:%d", port))
 
@@ -203,9 +203,10 @@ func buildCompilerImage(ctx context.Context, logger *slog.Logger, cfg config.Con
 }
 
 // pickFreePort returns the first available TCP port in [start, start+portSearchRange).
-func pickFreePort(start int) int {
+func pickFreePort(ctx context.Context, start int) int {
+	var lc net.ListenConfig
 	for port := start; port < start+portSearchRange; port++ {
-		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+		ln, err := lc.Listen(ctx, "tcp", fmt.Sprintf(":%d", port))
 		if err == nil {
 			_ = ln.Close()
 			return port
