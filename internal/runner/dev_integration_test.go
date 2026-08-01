@@ -90,7 +90,8 @@ func writeFile(t *testing.T, path, content string) {
 // freePort returns an OS-assigned free TCP port.
 func freePort(t *testing.T) int {
 	t.Helper()
-	l, err := net.Listen("tcp", "127.0.0.1:0")
+	var lc net.ListenConfig
+	l, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("net.Listen: %v", err)
 	}
@@ -203,9 +204,12 @@ func TestRunDev_EndToEnd_SmokeTest(t *testing.T) {
 	}()
 
 	// 5. Wait for the proxy to be listening.
+	var dialer net.Dialer
 	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
-		conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", itoaPort(userPort)), 200*time.Millisecond)
+		dialCtx, dialCancel := context.WithTimeout(ctx, 200*time.Millisecond)
+		conn, err := dialer.DialContext(dialCtx, "tcp", net.JoinHostPort("127.0.0.1", itoaPort(userPort)))
+		dialCancel()
 		if err == nil {
 			_ = conn.Close()
 			break
@@ -215,7 +219,11 @@ func TestRunDev_EndToEnd_SmokeTest(t *testing.T) {
 
 	// 6. Make a frontend request. Should reach the fake compiler.
 	client := &http.Client{Timeout: 5 * time.Second}
-	feResp, err := client.Get("http://127.0.0.1:" + itoaPort(userPort) + "/index.html")
+	feReq, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://127.0.0.1:"+itoaPort(userPort)+"/index.html", nil)
+	if err != nil {
+		t.Fatalf("building frontend request: %v", err)
+	}
+	feResp, err := client.Do(feReq)
 	if err != nil {
 		// Don't fail the whole test on transient race; collect what we can.
 		t.Logf("frontend request failed (may be racy on startup): %v", err)
@@ -228,7 +236,11 @@ func TestRunDev_EndToEnd_SmokeTest(t *testing.T) {
 	}
 
 	// 7. Make a proxy request. Should reach the fake API Gateway.
-	apiResp, err := client.Get("http://127.0.0.1:" + itoaPort(userPort) + "/ask?q=smoke")
+	apiReq, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://127.0.0.1:"+itoaPort(userPort)+"/ask?q=smoke", nil)
+	if err != nil {
+		t.Fatalf("building API request: %v", err)
+	}
+	apiResp, err := client.Do(apiReq)
 	if err != nil {
 		t.Fatalf("API request through proxy: %v", err)
 	}
