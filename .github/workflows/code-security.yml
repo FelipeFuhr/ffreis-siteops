@@ -15,4 +15,4 @@ jobs:
   govulncheck:
     permissions:
       contents: read
-    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-security.yml@d9b0146bb491bf06a79c9c6289034537522cbed3
+    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-security.yml@c3d274cf44074f49908948305861c74714cdc9d9 # v1.3.0

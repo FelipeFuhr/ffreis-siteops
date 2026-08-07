@@ -82,6 +82,22 @@ compiler embeds resources into HTML:
 All new fields are optional; omitting them uses the compiler's built-in defaults.
 Flags are passed for both `build` and `build-inline` commands, but `-inline-assets`
 already handles all assets as data URIs so the threshold flags are redundant there.
+
+## `make coverage-gate` is now actually enforced — and currently failing
+
+Before the `ffreis-workflows-go` v1.3.0 rollout (PR #56), `make coverage-gate`
+silently no-op'd on both a fresh checkout and any worktree: the old
+`PLATFORM_STANDARDS_SHA` pin's fetched `check_required_tools.sh` had a broken
+top-level `return` instead of `exit`, and a fresh checkout/worktree never had
+that script on disk at all (the `.gitignore` blanket-ignored `scripts/hooks/`
+wholesale instead of naming only the fetched files). Both are fixed now, so
+`coverage-gate` genuinely runs pre-push for the first time — and it fails:
+measured unit coverage is 61.1%, well under `COVERAGE_MIN ?= 90`. This is
+pre-existing technical debt, not caused by the v1.3.0 rollout itself. Until
+it's closed (add tests, or explicitly lower `COVERAGE_MIN` with
+justification), expect `git push` to require
+`LEFTHOOK_EXCLUDE=quality-gates`.
+
 ## Keeping this file current
 
 - **If you discover a fact not reflected here:** add it before finishing your task.

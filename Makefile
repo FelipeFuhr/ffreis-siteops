@@ -19,11 +19,11 @@ MUTATION_THRESHOLD ?= 60
 LEFTHOOK_DIR ?= $(CURDIR)/.bin
 LEFTHOOK_BIN ?= $(LEFTHOOK_DIR)/lefthook
 
-.PHONY: mutation-test help info siteops-build deploy deploy-local dev \
+.PHONY: mutation help info siteops-build deploy deploy-local dev \
 	build build-inline watch serve validate-site-data validate-assets clean \
 	compose-up compose-down compose-logs compose-rebuild publish \
 	docker-up docker-down docker-logs docker-rebuild \
-	fmt-check lint test test-race coverage-gate smoke-check secrets-scan-staged quality-gates hook-generated-drift \
+	fmt-check lint test test-race coverage-gate integration-coverage-gate smoke-check secrets-scan-staged quality-gates hook-generated-drift \
 	lefthook-bootstrap lefthook-install lefthook-run lefthook
 
 # ── Binary build ──────────────────────────────────────────────────────────────
@@ -34,8 +34,8 @@ $(SITEOPS_BIN): go.mod go.sum $(shell find cmd internal -name '*.go' 2>/dev/null
 
 siteops-build: $(SITEOPS_BIN) ## (Re)compile the siteops binary to .bin/siteops
 
-## mutation-test: run mutation testing with gremlins (slow — intended for CI/weekly)
-mutation-test: ## Run mutation testing with gremlins (slow — CI only)
+## mutation: run mutation testing with gremlins (slow — intended for CI/weekly)
+mutation: ## Run mutation testing with gremlins (slow — CI only)
 	@which gremlins >/dev/null 2>&1 || go install github.com/go-gremlins/gremlins/cmd/gremlins@latest
 	gremlins unleash --threshold-efficacy $(MUTATION_THRESHOLD) $(MUTATION_PACKAGES)
 
@@ -123,6 +123,9 @@ test-race: ## Run tests with race detector
 coverage-gate: ## Run tests with coverage and fail if below COVERAGE_MIN
 	@COVERAGE_MIN="$(COVERAGE_MIN)" ./scripts/hooks/check_coverage_gate.sh
 
+integration-coverage-gate: ## Run integration-tagged tests with coverage and fail if below COVERAGE_MIN (no-op if no //go:build integration files exist)
+	@COVERAGE_MIN="$(COVERAGE_MIN)" ./scripts/hooks/check_integration_coverage_gate.sh
+
 smoke-check: ## Build hello-world through siteops and assert output
 	@set -euo pipefail; \
 	./scripts/hooks/check_required_tools.sh go "$(WEBSITE_COMPILER_BIN)"; \
@@ -170,8 +173,12 @@ hook-generated-drift: ## Run generate target if present and fail on drift
 	fi
 
 
-PLATFORM_STANDARDS_SHA := 3c787edb4e96ddea2e86b2add2c32139685e8db7  # v1.2.1
+PLATFORM_STANDARDS_SHA := 273842219190739c6b462c21331b234271446b13  # v1.10.0
 PLATFORM_STANDARDS_RAW := https://raw.githubusercontent.com/FelipeFuhr/ffreis-platform-standards
+# NOTE: `VAR := sha  # comment` bakes the two spaces before `#` into the value (Make only
+# strips from `#` onward, not the whitespace preceding it), which curl then rejects as
+# "Malformed input to a URL function". Every reference below wraps in $(strip …) rather
+# than reformatting the assignment, since expansion happens at use time.
 
 HOOK_SCRIPTS := \
 	check_merge_markers.sh \
@@ -182,10 +189,10 @@ HOOK_SCRIPTS := \
 
 hook-scripts: ## Download bootstrap + hook scripts from ffreis-platform-standards
 	@mkdir -p scripts/hooks
-	@curl -fsSL "$(PLATFORM_STANDARDS_RAW)/$(PLATFORM_STANDARDS_SHA)/lefthook/bootstrap_lefthook.sh" \
+	@curl -fsSL "$(PLATFORM_STANDARDS_RAW)/$(strip $(PLATFORM_STANDARDS_SHA))/lefthook/bootstrap_lefthook.sh" \
 		-o scripts/bootstrap_lefthook.sh && chmod +x scripts/bootstrap_lefthook.sh
 	@for script in $(HOOK_SCRIPTS); do \
-		curl -fsSL "$(PLATFORM_STANDARDS_RAW)/$(PLATFORM_STANDARDS_SHA)/lefthook/scripts/$$script" \
+		curl -fsSL "$(PLATFORM_STANDARDS_RAW)/$(strip $(PLATFORM_STANDARDS_SHA))/lefthook/scripts/$$script" \
 			-o "scripts/hooks/$$script" && chmod +x "scripts/hooks/$$script"; \
 	done
 	@echo "Hook scripts downloaded."
@@ -212,7 +219,7 @@ lefthook: lefthook-bootstrap lefthook-install lefthook-run ## Install hooks and 
 
 install-act: ## Download pinned act binary into .bin/
 	@mkdir -p scripts
-	@curl -fsSL "$(PLATFORM_STANDARDS_RAW)/$(PLATFORM_STANDARDS_SHA)/scripts/install_act.sh" \
+	@curl -fsSL "$(PLATFORM_STANDARDS_RAW)/$(strip $(PLATFORM_STANDARDS_SHA))/scripts/install_act.sh" \
 		-o scripts/install_act.sh && chmod +x scripts/install_act.sh
 	@bash ./scripts/install_act.sh
 
