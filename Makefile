@@ -170,7 +170,8 @@ hook-generated-drift: ## Run generate target if present and fail on drift
 	fi
 
 
-PLATFORM_STANDARDS_SHA := 3c787edb4e96ddea2e86b2add2c32139685e8db7  # v1.2.1
+# v1.10.0
+PLATFORM_STANDARDS_SHA := 273842219190739c6b462c21331b234271446b13
 PLATFORM_STANDARDS_RAW := https://raw.githubusercontent.com/FelipeFuhr/ffreis-platform-standards
 
 HOOK_SCRIPTS := \
