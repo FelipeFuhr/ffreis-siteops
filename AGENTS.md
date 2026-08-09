@@ -82,6 +82,38 @@ compiler embeds resources into HTML:
 All new fields are optional; omitting them uses the compiler's built-in defaults.
 Flags are passed for both `build` and `build-inline` commands, but `-inline-assets`
 already handles all assets as data URIs so the threshold flags are redundant there.
+
+## Coverage gate — this repo owns the canonical hook script
+
+`scripts/hooks/check_coverage_gate.sh` is the **fleet-canonical** copy. It is
+mirrored into every Copier archetype by `ffreis-project-templates`
+(`make sync-hooks`, verified by `make check-drift`), and from there into every
+scaffolded repo. **Fix it here first, then re-sync the templates** — never edit a
+template or scaffolded copy directly.
+
+The gate excludes the process entrypoint (`main.go`) from the coverage
+*denominator* via `COVERAGE_IGNORE_REGEX` (default `(^|/)main\.go$`), the Go
+analogue of `cargo llvm-cov --ignore-filename-regex 'main\.rs$'` in
+`ml/ffreis-ml-crypto-rl`. `func main()` ends in `os.Exit`, which kills the test
+binary, so it is unreachable from any in-process test; counting it made a fresh
+scaffold unpushable at 0% and the only way through was to bypass the gate.
+
+This is honest **only** because `cmd/siteops/main.go` is a one-line shim:
+
+```go
+func main() { os.Exit(cli.Run("siteops", os.Args[1:])) }
+```
+
+Every testable statement lives behind it in `internal/`, and is measured. Keep it
+that way — do not move logic into `main.go`, and if a repo's `main.go` grows real
+logic, split it out or set `COVERAGE_IGNORE_REGEX=""` there. On this repo the
+exclusion is worth 0.1pp (1 of 629 blocks): it is a scaffold unblocker, not a
+loophole.
+
+Note: siteops' own total sits well below `COVERAGE_MIN=90` (≈61%) — pre-existing
+debt in `internal/cli/watch.go`, `internal/runner`, and `internal/logx`, not
+something this exclusion changed.
+
 ## Keeping this file current
 
 - **If you discover a fact not reflected here:** add it before finishing your task.
