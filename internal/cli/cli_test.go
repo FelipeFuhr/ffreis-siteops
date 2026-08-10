@@ -435,6 +435,52 @@ func TestBuildArgs_WithMirrorExternalAssets(t *testing.T) {
 	}
 }
 
+func TestBuildArgs_ForwardsOptionalEmbeddingOptions(t *testing.T) {
+	jsInline, jsShared, raster := 4096, 0, 2147483647
+	cfg := config.Config{
+		WebsiteRoot:             "/site",
+		OutDir:                  "/dist",
+		JSInlineThreshold:       &jsInline,
+		JSSharedInlineThreshold: &jsShared,
+		RasterInlineThreshold:   &raster,
+		EmbedFonts:              true,
+		InlineBodyCSS:           true,
+	}
+
+	args := buildArgs(cfg, false)
+
+	for _, want := range [][2]string{
+		{"-js-inline-threshold", "4096"},
+		{"-js-shared-inline-threshold", "0"},
+		{"-raster-inline-threshold", "2147483647"},
+	} {
+		if !containsSequence(args, want[0], want[1]) {
+			t.Errorf("missing %s %s in %v", want[0], want[1], args)
+		}
+	}
+	if !contains(args, "-embed-fonts") {
+		t.Errorf("missing -embed-fonts in %v", args)
+	}
+	if !contains(args, "-inline-body-css") {
+		t.Errorf("missing -inline-body-css in %v", args)
+	}
+}
+
+func TestBuildArgs_OmitsUnsetEmbeddingOptions(t *testing.T) {
+	cfg := config.Config{WebsiteRoot: "/site", OutDir: "/dist"}
+
+	args := buildArgs(cfg, false)
+
+	for _, flag := range []string{
+		"-js-inline-threshold", "-js-shared-inline-threshold",
+		"-raster-inline-threshold", "-embed-fonts", "-inline-body-css",
+	} {
+		if contains(args, flag) {
+			t.Errorf("%s should be omitted when unset: %v", flag, args)
+		}
+	}
+}
+
 func TestBuildArgs_EmptySiteDataSkipped(t *testing.T) {
 	cfg := config.Config{WebsiteRoot: "/site", OutDir: "/dist", SiteDataSource: "   "}
 	args := buildArgs(cfg, false)

@@ -11,6 +11,11 @@ import (
 	"ffreis-siteops/internal/runner"
 )
 
+// runnerRunDev is the dev-orchestrator port, bound to runner.RunDev in
+// production. Like runCompiler and runCompose in cli.go it is a package var so
+// the CLI layer can be exercised without spawning the compiler subprocess.
+var runnerRunDev = runner.RunDev
+
 // runDev wires the `dev` subcommand: parses --lang, then delegates to
 // runner.RunDev for orchestration.
 func runDev(ctx context.Context, logger *slog.Logger, cfg config.Config, args []string) error {
@@ -38,5 +43,5 @@ func runDev(ctx context.Context, logger *slog.Logger, cfg config.Config, args []
 		DevOrigin:       cfg.API.DevOrigin,
 		ProxyPaths:      cfg.API.ProxyPaths,
 	}
-	return runner.RunDev(ctx, logger, spec)
+	return runnerRunDev(ctx, logger, spec)
 }

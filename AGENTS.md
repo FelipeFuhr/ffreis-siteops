@@ -110,9 +110,27 @@ logic, split it out or set `COVERAGE_IGNORE_REGEX=""` there. On this repo the
 exclusion is worth 0.1pp (1 of 629 blocks): it is a scaffold unblocker, not a
 loophole.
 
-Note: siteops' own total sits well below `COVERAGE_MIN=90` (≈61%) — pre-existing
-debt in `internal/cli/watch.go`, `internal/runner`, and `internal/logx`, not
-something this exclusion changed.
+Note: siteops' own total is ≈93%, above `COVERAGE_MIN=90`. The ≈61% that
+preceded the entrypoint exclusion was untested code in `internal/cli/watch.go`,
+`internal/runner/{sse,watcher}.go`, and `internal/cli/dev.go`, not something the
+exclusion caused; those are now covered.
+
+## Test seams — package vars, not build tags
+
+External process spawning is reached through package-level `var`s that tests
+reassign and restore (`runner.Run`, and in `internal/cli` the `runCompiler` /
+`runCompose` / `runAWS` / `runnerRunDev` bindings). Two support the same
+pattern for filesystem locations rather than commands:
+
+- `internal/cli/watch.go` — `compilerCloneDir` is a `var` (not a `const`) so the
+  GitHub-clone cache probe can be redirected at a scratch dir instead of the
+  shared `/tmp/ffreis-website-compiler`.
+- `internal/cli/dev.go` — `runnerRunDev` is bound to `runner.RunDev`, so the
+  `dev` subcommand's flag parsing and `DevSpec` mapping are testable without
+  spawning the compiler and binding real ports.
+
+Keep new outward calls on this pattern; do not add build tags or test-only
+branches inside production functions.
 
 ## Keeping this file current
 

@@ -18,10 +18,14 @@ import (
 
 const (
 	compilerGitHubURL  = "https://github.com/FelipeFuhr/ffreis-website-compiler.git"
-	compilerCloneDir   = "/tmp/ffreis-website-compiler"
 	defaultPreviewPort = 8088
 	portSearchRange    = 10
 )
+
+// compilerCloneDir is the cache location for the GitHub fallback clone of the
+// compiler source. It is a var rather than a const so the clone target can be
+// redirected to a scratch directory instead of the shared /tmp path.
+var compilerCloneDir = "/tmp/ffreis-website-compiler"
 
 func runWatch(ctx context.Context, logger *slog.Logger, cfg config.Config) error {
 	if err := bootstrapCompilerImage(ctx, logger, cfg); err != nil {

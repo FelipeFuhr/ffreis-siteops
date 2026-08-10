@@ -2,6 +2,8 @@ package logx
 
 import (
 	"bytes"
+	"context"
+	"log/slog"
 	"strings"
 	"testing"
 )
@@ -113,6 +115,51 @@ func TestNewWithEnv_WarningLevel(t *testing.T) {
 	out := buf.String()
 	if strings.Contains(out, "info-hidden") {
 		t.Error("info should be hidden at warning level")
+	}
+}
+
+// ── New (reads the real process environment) ───────────────────────────────
+
+func TestNew_LogLevelDebugEnablesDebugRecords(t *testing.T) {
+	t.Setenv("LOG_LEVEL", "debug")
+	t.Setenv("LOG_FORMAT", "")
+	t.Setenv("LOG_SOURCE", "")
+
+	logger := New("siteops")
+
+	if logger == nil {
+		t.Fatal("New returned a nil logger")
+	}
+	if !logger.Enabled(context.Background(), slog.LevelDebug) {
+		t.Error("expected debug records to be enabled when LOG_LEVEL=debug")
+	}
+}
+
+func TestNew_UnsetLogLevelDefaultsToInfo(t *testing.T) {
+	t.Setenv("LOG_LEVEL", "")
+	t.Setenv("LOG_FORMAT", "")
+	t.Setenv("LOG_SOURCE", "")
+
+	logger := New("siteops")
+
+	ctx := context.Background()
+	if logger.Enabled(ctx, slog.LevelDebug) {
+		t.Error("debug records should be disabled at the default level")
+	}
+	if !logger.Enabled(ctx, slog.LevelInfo) {
+		t.Error("info records should be enabled at the default level")
+	}
+}
+
+// ── errInvalidValue message ────────────────────────────────────────────────
+
+func TestParseFormat_UnsupportedValueReportsInvalidValue(t *testing.T) {
+	_, err := parseFormat("yaml")
+	if err == nil {
+		t.Fatal("expected an error for an unsupported log format")
+	}
+	if got := err.Error(); got != "invalid value" {
+		t.Errorf("err.Error() = %q, want %q", got, "invalid value")
 	}
 }
 
