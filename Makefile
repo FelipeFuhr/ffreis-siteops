@@ -4,13 +4,22 @@ CONFIG      ?= config/site.local.yaml
 SITEOPS_BIN := .bin/siteops
 SITEOPS     := $(SITEOPS_BIN) -config $(CONFIG)
 CONTAINER_COMMAND ?= podman
-# scan-fix(siteops:compiler-path): resolve to an absolute path when found on
-# PATH. siteops' own config resolver (internal/config/config.go resolvePath)
-# joins any non-absolute compiler_command against the config file's
-# directory (never does a PATH lookup) — smoke-check writes its generated
-# config into a fresh mktemp -d, so a bare "website-compiler" default always
-# resolved to "<tmpdir>/website-compiler" and failed with "no such file".
-WEBSITE_COMPILER_BIN ?= $(shell command -v website-compiler 2>/dev/null || echo website-compiler)
+# scan-fix(siteops:compiler-path): resolve to an absolute, symlink-resolved
+# path when found on PATH.
+#  1. siteops' own config resolver (internal/config/config.go resolvePath)
+#     joins any non-absolute compiler_command against the config file's
+#     directory (never does a PATH lookup) — smoke-check writes its
+#     generated config into a fresh mktemp -d, so a bare "website-compiler"
+#     default always resolved to "<tmpdir>/website-compiler" and failed
+#     with "no such file".
+#  2. website-compiler's own self-containerizing build derives its build
+#     context (Dockerfile, go.mod/go.sum, source) from argv[0]'s directory,
+#     not from the symlink target — invoking it via the `~/bin/website-
+#     compiler -> .../ffreis-website-compiler/website-compiler` convenience
+#     symlink (a common local dev-tool layout) resolves the build context to
+#     ~/bin instead of the real repo, breaking `COPY go.mod go.sum ./`.
+#     `readlink -f` follows the symlink so argv[0] lands in the real repo.
+WEBSITE_COMPILER_BIN ?= $(shell command -v website-compiler >/dev/null 2>&1 && readlink -f "$$(command -v website-compiler)" || echo website-compiler)
 # Matches website-compiler's own Makefile defaults (PREFIX=ffreis,
 # COMPILER_IMAGE_NAME=website-compiler-cli, IMAGE_TAG=local). The compiled
 # binary needs this in its env to construct a valid image tag when invoked
