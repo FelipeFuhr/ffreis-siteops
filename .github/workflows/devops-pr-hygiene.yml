@@ -15,6 +15,11 @@ jobs:
     if: github.event_name == 'pull_request'
     permissions:
       pull-requests: read
+      # scan-fix(gha:workflow-permissions): general-semantic-pr.yml declares a
+      # workflow-level `permissions: contents: read` even though it doesn't
+      # check out code — caller must grant a superset or GitHub refuses to
+      # start the run.
+      contents: read
     uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-semantic-pr.yml@5dfbb4986ceb88f6518fa719da3a255294cf03cf
 
   actionlint:
@@ -39,4 +44,3 @@ jobs:
           {"label":"go","patterns":["**/*.go","go.mod","go.sum"]},
           {"label":"docs","patterns":["**/*.md"]}
         ]
-
