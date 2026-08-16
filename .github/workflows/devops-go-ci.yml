@@ -26,7 +26,7 @@ jobs:
       contents: read
     uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-mod-tidy-check.yml@d9b0146bb491bf06a79c9c6289034537522cbed3
     with:
-      go-version: "1.25.8"
+      go-version: "1.25.13"
       working-directory: "."
 
   fmt:
@@ -34,16 +34,20 @@ jobs:
       contents: read
     uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-fmt.yml@d9b0146bb491bf06a79c9c6289034537522cbed3
     with:
-      go-version: "1.25.8"
+      go-version: "1.25.13"
       working-directory: "."
 
   lint:
     needs: [fmt]
     permissions:
       contents: read
+      # scan-fix(gha:workflow-permissions): go-lint.yml's nested job needs
+      # pull-requests: read for golangci-lint-action to fetch the PR diff —
+      # caller must grant a superset or GitHub refuses to start the run.
+      pull-requests: read
     uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-lint.yml@d9b0146bb491bf06a79c9c6289034537522cbed3
     with:
-      go-version: "1.25.8"
+      go-version: "1.25.13"
       working-directory: "."
 
   test:
@@ -53,6 +57,5 @@ jobs:
       contents: read
     uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-test.yml@d9b0146bb491bf06a79c9c6289034537522cbed3
     with:
-      go-version: "1.25.8"
+      go-version: "1.25.13"
       working-directory: "."
-

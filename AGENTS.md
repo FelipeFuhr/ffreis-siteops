@@ -82,6 +82,56 @@ compiler embeds resources into HTML:
 All new fields are optional; omitting them uses the compiler's built-in defaults.
 Flags are passed for both `build` and `build-inline` commands, but `-inline-assets`
 already handles all assets as data URIs so the threshold flags are redundant there.
+
+## Coverage gate — this repo owns the canonical hook script
+
+`scripts/hooks/check_coverage_gate.sh` is the **fleet-canonical** copy. It is
+mirrored into every Copier archetype by `ffreis-project-templates`
+(`make sync-hooks`, verified by `make check-drift`), and from there into every
+scaffolded repo. **Fix it here first, then re-sync the templates** — never edit a
+template or scaffolded copy directly.
+
+The gate excludes the process entrypoint (`main.go`) from the coverage
+*denominator* via `COVERAGE_IGNORE_REGEX` (default `(^|/)main\.go$`), the Go
+analogue of `cargo llvm-cov --ignore-filename-regex 'main\.rs$'` in
+`ml/ffreis-ml-crypto-rl`. `func main()` ends in `os.Exit`, which kills the test
+binary, so it is unreachable from any in-process test; counting it made a fresh
+scaffold unpushable at 0% and the only way through was to bypass the gate.
+
+This is honest **only** because `cmd/siteops/main.go` is a one-line shim:
+
+```go
+func main() { os.Exit(cli.Run("siteops", os.Args[1:])) }
+```
+
+Every testable statement lives behind it in `internal/`, and is measured. Keep it
+that way — do not move logic into `main.go`, and if a repo's `main.go` grows real
+logic, split it out or set `COVERAGE_IGNORE_REGEX=""` there. On this repo the
+exclusion is worth 0.1pp (1 of 629 blocks): it is a scaffold unblocker, not a
+loophole.
+
+Note: siteops' own total is ≈93%, above `COVERAGE_MIN=90`. The ≈61% that
+preceded the entrypoint exclusion was untested code in `internal/cli/watch.go`,
+`internal/runner/{sse,watcher}.go`, and `internal/cli/dev.go`, not something the
+exclusion caused; those are now covered.
+
+## Test seams — package vars, not build tags
+
+External process spawning is reached through package-level `var`s that tests
+reassign and restore (`runner.Run`, and in `internal/cli` the `runCompiler` /
+`runCompose` / `runAWS` / `runnerRunDev` bindings). Two support the same
+pattern for filesystem locations rather than commands:
+
+- `internal/cli/watch.go` — `compilerCloneDir` is a `var` (not a `const`) so the
+  GitHub-clone cache probe can be redirected at a scratch dir instead of the
+  shared `/tmp/ffreis-website-compiler`.
+- `internal/cli/dev.go` — `runnerRunDev` is bound to `runner.RunDev`, so the
+  `dev` subcommand's flag parsing and `DevSpec` mapping are testable without
+  spawning the compiler and binding real ports.
+
+Keep new outward calls on this pattern; do not add build tags or test-only
+branches inside production functions.
+
 ## Keeping this file current
 
 - **If you discover a fact not reflected here:** add it before finishing your task.

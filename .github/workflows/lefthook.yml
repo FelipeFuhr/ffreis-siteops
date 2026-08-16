@@ -24,6 +24,6 @@ jobs:
     uses: FelipeFuhr/ffreis-workflows-general/.github/workflows/general-lefthook.yml@8ff19efd329b76bce5ff5b98074b9aec74b239da # v1.8.1
     with:
       working-directory: "."
-      go-version: "1.25.8"
+      go-version: "1.25.13"
       lefthook-bootstrap-command: "make lefthook-bootstrap"
       lefthook-bin: ".bin/lefthook"

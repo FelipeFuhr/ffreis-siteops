@@ -42,5 +42,4 @@ dist/
 dist*/
 config/*.local.yaml
 
-scripts/hooks/
 scripts/bootstrap_lefthook.sh

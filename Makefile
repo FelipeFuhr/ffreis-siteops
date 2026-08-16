@@ -4,7 +4,28 @@ CONFIG      ?= config/site.local.yaml
 SITEOPS_BIN := .bin/siteops
 SITEOPS     := $(SITEOPS_BIN) -config $(CONFIG)
 CONTAINER_COMMAND ?= podman
-WEBSITE_COMPILER_BIN ?= website-compiler
+# scan-fix(siteops:compiler-path): resolve to an absolute, symlink-resolved
+# path when found on PATH.
+#  1. siteops' own config resolver (internal/config/config.go resolvePath)
+#     joins any non-absolute compiler_command against the config file's
+#     directory (never does a PATH lookup) — smoke-check writes its
+#     generated config into a fresh mktemp -d, so a bare "website-compiler"
+#     default always resolved to "<tmpdir>/website-compiler" and failed
+#     with "no such file".
+#  2. website-compiler's own self-containerizing build derives its build
+#     context (Dockerfile, go.mod/go.sum, source) from argv[0]'s directory,
+#     not from the symlink target — invoking it via the `~/bin/website-
+#     compiler -> .../ffreis-website-compiler/website-compiler` convenience
+#     symlink (a common local dev-tool layout) resolves the build context to
+#     ~/bin instead of the real repo, breaking `COPY go.mod go.sum ./`.
+#     `readlink -f` follows the symlink so argv[0] lands in the real repo.
+WEBSITE_COMPILER_BIN ?= $(shell command -v website-compiler >/dev/null 2>&1 && readlink -f "$$(command -v website-compiler)" || echo website-compiler)
+# Matches website-compiler's own Makefile defaults (PREFIX=ffreis,
+# COMPILER_IMAGE_NAME=website-compiler-cli, IMAGE_TAG=local). The compiled
+# binary needs this in its env to construct a valid image tag when invoked
+# standalone (not via its own `make`) — without it, IMAGE_ROOT resolves
+# empty and it fails with "invalid reference format" on a leading "/".
+WEBSITE_COMPILER_IMAGE ?= ffreis/website-compiler-cli:local
 
 GOFMT ?= gofmt
 GOLANGCI_LINT ?= golangci-lint
@@ -16,28 +37,62 @@ LEFTHOOK_VERSION ?= 1.7.10
 
 MUTATION_PACKAGES ?= ./internal/...
 MUTATION_THRESHOLD ?= 60
+FUZZ_PACKAGES ?= ./internal/...
+FUZZ_TIME     ?= 30s
+FUZZ_TIME_EXT ?= 10m
 LEFTHOOK_DIR ?= $(CURDIR)/.bin
 LEFTHOOK_BIN ?= $(LEFTHOOK_DIR)/lefthook
 
-.PHONY: mutation-test help info siteops-build deploy deploy-local dev \
+.PHONY: mutation-test mutation help info siteops-build build-all deploy deploy-local dev \
 	build build-inline watch serve validate-site-data validate-assets clean \
 	compose-up compose-down compose-logs compose-rebuild publish \
 	docker-up docker-down docker-logs docker-rebuild \
 	fmt-check lint test test-race coverage-gate smoke-check secrets-scan-staged quality-gates hook-generated-drift \
+	fuzz fuzz-extended \
 	lefthook-bootstrap lefthook-install lefthook-run lefthook
 
 # ── Binary build ──────────────────────────────────────────────────────────────
 # Rebuilds only when sources, go.mod, or go.sum change.
+# scan-fix(go:buildvcs-worktree): -buildvcs=false — `go build`'s VCS auto-
+# stamping runs `git status --porcelain` and fails with "error obtaining VCS
+# status: exit status 128" when built from a linked git worktree (confirmed:
+# same command succeeds in the canonical checkout, fails in every
+# .worktrees/* checkout). Nothing here reads the embedded VCS build info.
 $(SITEOPS_BIN): go.mod go.sum $(shell find cmd internal -name '*.go' 2>/dev/null)
 	@mkdir -p .bin
-	go build -o $(SITEOPS_BIN) ./cmd/siteops
+	go build -buildvcs=false -o $(SITEOPS_BIN) ./cmd/siteops
 
 siteops-build: $(SITEOPS_BIN) ## (Re)compile the siteops binary to .bin/siteops
+
+## build-all: alias of siteops-build — single-binary CLI, no cross-compile matrix
+## (required by the lefthook release tier's `cross-build` -> `make build-all`)
+build-all: siteops-build
 
 ## mutation-test: run mutation testing with gremlins (slow — intended for CI/weekly)
 mutation-test: ## Run mutation testing with gremlins (slow — CI only)
 	@which gremlins >/dev/null 2>&1 || go install github.com/go-gremlins/gremlins/cmd/gremlins@latest
 	gremlins unleash --threshold-efficacy $(MUTATION_THRESHOLD) $(MUTATION_PACKAGES)
+
+# scan-fix(lefthook:release-tier): platform-standards' lefthook/go.yml release
+# tier requires `make mutation` unconditionally (no graceful skip, since
+# before this repo's pinned v1.6.0 — see ffreis-agents-runtime's AGENTS.md).
+# Alias so the existing mutation-test target satisfies the contract.
+mutation: mutation-test ## Alias for the lefthook release tier's `make mutation`
+
+## fuzz: run all Fuzz* targets for FUZZ_TIME each (default 30s — quick CI smoke-test)
+## (required by lefthook release tier; no-ops cleanly if no Fuzz* funcs exist)
+fuzz:
+	@for pkg in $$(go list $(FUZZ_PACKAGES)); do \
+	  targets=$$(go test -list 'Fuzz.*' "$$pkg" 2>/dev/null | grep '^Fuzz' || true); \
+	  for target in $$targets; do \
+	    echo "→ $$pkg/$$target ($(FUZZ_TIME))"; \
+	    go test -run='^$$' -fuzz="^$${target}$$" -fuzztime="$(FUZZ_TIME)" "$$pkg"; \
+	  done; \
+	done
+
+## fuzz-extended: run all Fuzz* targets for FUZZ_TIME_EXT each (default 10m — deep weekly run)
+fuzz-extended: FUZZ_TIME=$(FUZZ_TIME_EXT)
+fuzz-extended: fuzz
 
 help: ## Show siteops commands
 	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target> [CONFIG=path/to/config.yaml]\n\nTargets:\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -141,7 +196,7 @@ smoke-check: ## Build hello-world through siteops and assert output
 		'default_addr: ":18080"' \
 		"container_command: \"$(CONTAINER_COMMAND)\"" \
 		> "$$tmp_dir/smoke.yaml"; \
-	go run ./cmd/siteops -config "$$tmp_dir/smoke.yaml" build; \
+	WEBSITE_COMPILER_IMAGE="$(WEBSITE_COMPILER_IMAGE)" go run ./cmd/siteops -config "$$tmp_dir/smoke.yaml" build; \
 	test -f "$$tmp_dir/dist/index.html"
 
 secrets-scan-staged: ## Scan staged diff for secrets
