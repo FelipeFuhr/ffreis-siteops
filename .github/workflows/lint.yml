@@ -20,7 +20,11 @@ jobs:
   lint:
     permissions:
       contents: read
+      # scan-fix(gha:workflow-permissions): go-lint.yml's nested job needs
+      # pull-requests: read for golangci-lint-action to fetch the PR diff —
+      # caller must grant a superset or GitHub refuses to start the run.
+      pull-requests: read
     uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-lint.yml@c3d274cf44074f49908948305861c74714cdc9d9 # v1.3.0
     with:
-      go-version: "1.25.8"
+      go-version: "1.25.13"
       working-directory: "."

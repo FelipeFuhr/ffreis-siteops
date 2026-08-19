@@ -2,7 +2,7 @@ module ffreis-siteops
 
 go 1.25.8
 
-toolchain go1.25.12
+toolchain go1.25.13
 
 require (
 	golang.org/x/vuln v1.3.0
