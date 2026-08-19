@@ -24,7 +24,7 @@ jobs:
   mod-tidy:
     permissions:
       contents: read
-    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-mod-tidy-check.yml@d9b0146bb491bf06a79c9c6289034537522cbed3
+    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-mod-tidy-check.yml@c3d274cf44074f49908948305861c74714cdc9d9 # v1.3.0
     with:
       go-version: "1.25.13"
       working-directory: "."
@@ -32,7 +32,7 @@ jobs:
   fmt:
     permissions:
       contents: read
-    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-fmt.yml@d9b0146bb491bf06a79c9c6289034537522cbed3
+    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-fmt.yml@c3d274cf44074f49908948305861c74714cdc9d9 # v1.3.0
     with:
       go-version: "1.25.13"
       working-directory: "."
@@ -45,7 +45,7 @@ jobs:
       # pull-requests: read for golangci-lint-action to fetch the PR diff —
       # caller must grant a superset or GitHub refuses to start the run.
       pull-requests: read
-    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-lint.yml@d9b0146bb491bf06a79c9c6289034537522cbed3
+    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-lint.yml@c3d274cf44074f49908948305861c74714cdc9d9 # v1.3.0
     with:
       go-version: "1.25.13"
       working-directory: "."
@@ -55,7 +55,14 @@ jobs:
     needs: [fmt]
     permissions:
       contents: read
-    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-test.yml@d9b0146bb491bf06a79c9c6289034537522cbed3
+      # scan-fix(gha:workflow-permissions): go-test.yml's job declares
+      # id-token: write (used by its optional L2 S3 build cache OIDC step,
+      # go-cache-s3 defaults false here so it's a no-op) — GitHub validates
+      # the caller grants a superset of the callee's declared permissions
+      # statically, regardless of whether the step actually runs, or the
+      # whole workflow fails to start with zero jobs (startup_failure).
+      id-token: write
+    uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-test.yml@c3d274cf44074f49908948305861c74714cdc9d9 # v1.3.0
     with:
       go-version: "1.25.13"
       working-directory: "."
