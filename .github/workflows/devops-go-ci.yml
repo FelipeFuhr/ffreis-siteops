@@ -55,6 +55,13 @@ jobs:
     needs: [fmt]
     permissions:
       contents: read
+      # scan-fix(gha:workflow-permissions): go-test.yml's job declares
+      # id-token: write (used by its optional L2 S3 build cache OIDC step,
+      # go-cache-s3 defaults false here so it's a no-op) — GitHub validates
+      # the caller grants a superset of the callee's declared permissions
+      # statically, regardless of whether the step actually runs, or the
+      # whole workflow fails to start with zero jobs (startup_failure).
+      id-token: write
     uses: FelipeFuhr/ffreis-workflows-go/.github/workflows/go-test.yml@c3d274cf44074f49908948305861c74714cdc9d9 # v1.3.0
     with:
       go-version: "1.25.13"
