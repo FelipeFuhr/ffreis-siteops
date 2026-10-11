@@ -53,7 +53,7 @@ make validate-site-data
 make validate-assets
 make compose-up
 make publish
-make dev CONFIG=config/flemming-dev.local.yaml LANG=pt
+make dev CONFIG=config/product-a-dev.local.yaml LANG=pt
 ```
 
 ### `dev` — run the develop env locally end-to-end

@@ -38,22 +38,22 @@ func (d *DevProxy) Handler() (http.Handler, error) {
 
 	var apiProxy *httputil.ReverseProxy
 	if strings.TrimSpace(d.APIGatewayURL) != "" {
-		apiProxy = httputil.NewSingleHostReverseProxy(apiURL)
-		baseDirector := apiProxy.Director
-		apiProxy.Director = func(r *http.Request) {
-			baseDirector(r)
-			r.Host = apiURL.Host
-			if d.DevOrigin != "" {
-				r.Header.Set("Origin", d.DevOrigin)
-				r.Header.Set("Referer", d.DevOrigin+"/")
-			}
-			d.Logger.Info(
-				"proxying to api gateway",
-				"method", r.Method,
-				"path", r.URL.Path,
-				"target_host", apiURL.Host,
-				"origin", d.DevOrigin,
-			)
+		apiProxy = &httputil.ReverseProxy{
+			Rewrite: func(pr *httputil.ProxyRequest) {
+				pr.SetURL(apiURL)
+				pr.Out.Host = apiURL.Host
+				if d.DevOrigin != "" {
+					pr.Out.Header.Set("Origin", d.DevOrigin)
+					pr.Out.Header.Set("Referer", d.DevOrigin+"/")
+				}
+				d.Logger.Info(
+					"proxying to api gateway",
+					"method", pr.Out.Method,
+					"path", pr.Out.URL.Path,
+					"target_host", apiURL.Host,
+					"origin", d.DevOrigin,
+				)
+			},
 		}
 		apiProxy.ModifyResponse = func(resp *http.Response) error {
 			if resp.Header.Get("Access-Control-Allow-Origin") != "" {
