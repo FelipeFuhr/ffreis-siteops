@@ -67,7 +67,7 @@ type APIConfig struct {
 	// https://abc123.execute-api.us-east-1.amazonaws.com).
 	GatewayURL string `yaml:"gateway_url"`
 	// DevOrigin is the dev domain whose Origin header the dev Lambdas accept
-	// (e.g. https://flemming.ffreis.com). The proxy rewrites the incoming
+	// (e.g. https://product-a.example.com). The proxy rewrites the incoming
 	// localhost Origin to this value so Lambda CORS checks pass.
 	DevOrigin string `yaml:"dev_origin"`
 	// ProxyPaths are request path patterns routed to the API Gateway instead
